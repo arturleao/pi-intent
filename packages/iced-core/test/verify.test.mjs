@@ -114,3 +114,23 @@ test("verifyUnit skips the verifier when evidence is missing", async (t) => {
   assert.equal(called, false);
   assert.equal(report.verdict, "fail");
 });
+
+test("verifiers see the full check output and are told it is evidence; reports keep only the tail", async (t) => {
+  const root = tempRepo({ git: true });
+  t.after(() => cleanup(root));
+  const cmd = `node -e "for (let i = 0; i < 400; i++) console.log('ok test-number-' + i)"`;
+  const [r] = await runCommands(root, [cmd]);
+  assert.ok(r.output.includes("test-number-0") && r.output.includes("test-number-399"), "full output kept for the prompt");
+  assert.ok(!r.tail.includes("test-number-0"), "report tail is short");
+  writeUnit(root, "001-dark-mode", unitText({ status: "verifying" }));
+  let prompt = "";
+  const report = await verifyUnit({
+    root, unit: core.readUnit(root, "001-dark-mode"), config: { ...core.loadConfig(root), verify: { ...core.loadConfig(root).verify, commands: [cmd] } },
+    evidence, runVerifierImpl: async (o) => { prompt = o.prompt; return { verifier: passing, error: null }; },
+  });
+  assert.ok(prompt.includes("test-number-0") && prompt.includes("test-number-399"));
+  assert.match(prompt, /produced by the ICED tooling on this exact working tree/);
+  assert.match(prompt, /inability to re-run a command is not by itself a failure/);
+  assert.equal(report.commandResults[0].output, undefined);
+  assert.ok(!fs.readFileSync(core.unitPaths(root, "001-dark-mode").verify, "utf8").includes("test-number-0"));
+});

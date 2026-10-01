@@ -2,18 +2,19 @@
 
 Pi-only ICED as two npm packages (agnostic core + pi extension)
 
-Verdict: **FAIL** (attempt 3, 2026-10-01T12:39:12Z, independent verifier: yes, needs human review)
+Verdict: **FAIL** (attempt 1, 2026-10-01T13:09:16Z, independent verifier: yes, needs human review)
 
-Verifiers (pi): expectations [openai-codex/gpt-6-astra, effort medium] (answered, 98s), failures [anthropic/claude-sonnet-5-5, effort medium] (answered, 57s), rules [openai-codex/gpt-5.6-terra, effort medium] (answered, 114s)
+Verifiers (pi): expectations [openai-codex/gpt-6-astra, effort medium] (answered, 77s), failures [anthropic/claude-sonnet-5-5, effort medium] (answered, 39s), rules [openai-codex/gpt-5.6-terra, effort medium] (answered, 81s)
 
 ## Builder summary
 
-Attempt 3. Fixed the attempt-2 E4 finding (verifier shell could write via WriteAllBytes, Set-Item, node --eval). (1) core guard isMutatingShell now covers .NET File/Directory write APIs and StreamWriter, Set-Item/ItemProperty/archives/Export-*, downloads with -OutFile/-o, and inline node/bun/deno, python, ruby, perl file operations. (2) New verifierShellDecision in pi-intent src/gate.mjs, used by the extension's ICED_ROLE=verifier handler: besides the write heuristic it blocks ALL inline code (node -e/--eval/-p/--import, python -c, perl/ruby/php -e, pwsh/powershell -Command/-EncodedCommand/-File, bash/sh/cmd -c or /c, Invoke-Expression/iex, Start-Process, Add-Type, .NET static calls, New-Object IO/WebClient, eval), so obfuscated writes cannot get through; running tests, builds, linters, git reads and repo scripts stays allowed. Live check: pi with ICED_ROLE=verifier and --tools read,grep,find,ls,powershell blocked `node -e "require('fs').writeFileSync(...)"` (no file created) and ran npm --version. Earlier fixes kept: intent/README.md cleaned, repo config without targets/runner, E4 reworded by the human.
+Resumed after the block. E4/F4 fixed by construction instead of patching the shell deny-list: verifiers now get no shell. pi-intent runner grants read-only agents exactly read, grep, find, ls (TOOLS["read-only"] === VERIFIER_TOOLS); the extension's ICED_ROLE=verifier handler blocks every other tool (write, edit, bash, powershell, any extension tool) via verifierToolDecision, so even a misconfigured --tools list cannot give a verifier a shell. The core verifier prompt now tells verifiers to judge from code, tests and the check results ICED already ran (verify.commands output is in the prompt). The test writer keeps write, edit and the shell (E4 as reworded). Docs updated. Everything else unchanged from attempts 1-3: iced-core host-neutral with injected agent, pi-intent extension, CLI/Action/skills/other harnesses removed, repo cleaned.
 
 ## Problems
 
-- [E4] failed: Runner tests pass model, effort and tool arguments. Read-only enforcement fails: directly evaluated verifierShellDecision('ni probe.txt') and verifierShellDecision('git -C . clean -fd'); both return allow. Get-Alias ni confirms New-Item. Extension index.ts:475-483 permits these decisions. Commands were evaluated as strings only; no destructive commands executed. | runner.test and gate.test pass (33/33). Verifier tools are read,grep,find,ls,shell with no write/edit; the shell gate blocked my own inline node -e. Reading the rules shows the deny-list leaves gaps (ni/sc/ac aliases, find -delete, tar x, dd of=, sort -o, npx/npm exec, repo scripts that write), so shell read-only is heuristic. | runner.mjs grants read-only verifiers powershell. gate.mjs uses deny-list only. PowerShell alias ri is Remove-Item (confirmed by Get-Alias ri) and command `ri <path>` matches neither mutating nor inline-code patterns, so verifier can delete files.
-- Failure condition [F4] triggered: Verifier tool list excludes literal write/edit tools. Shell still permits mutation, reported separately under E4. | The verifier gets no write/edit tools. Shell can still write through deny-list gaps (see E4 evidence); noted as a risk. | Verifier receives powershell, capable of writes. `ri` aliases Remove-Item and bypasses shell deny-list.
+- Verifier failed the unit: [expectations] Fail denotes insufficient independent evidence under D1, not demonstrated implementation defect. Read-only verifier gate prevents required command reruns. Have authorized test executor independently run npm test, git ls-files and npm pack --dry-run; human must demonstrate /reload and /iced status. No files modified.
+[failures] No shell available, so npm test and npm pack were not re-run; I relied on the check output in the prompt plus static inspection. Human should confirm E8 (/iced status after /reload). Leftover model names containing 'codex' and 'claude' in .iced/config.json are model refs, not harness targets. Check that the harness scan test excludes .iced/config.json.
+[rules] E8 needs human reload/status confirmation before acceptance.
 
 ## Expectations
 
@@ -22,84 +23,84 @@ Attempt 3. Fixed the attempt-2 E4 finding (verifier shell could write via WriteA
 - Result: **pass**
 - Verify: test | packages/iced-core/test (agnostic source scan + verifyUnit with injected runner)
 - Builder evidence: test: packages/iced-core/test/agnostic.test.mjs + verify-parallel.test.mjs + models.test.mjs (injected fake agent end to end)
-- Verifier: npm test passed core source/import scans and injected-runner verification tests. | Grep of iced-core src/package.json/README finds no pi/claude/codex/cursor/gemini/copilot except 'pi-intent' in repo URLs. agnostic.test and verify tests pass in npm test (67/67). | Ran npm test: iced-core 67/67 passed, including agnostic source scan and injected verification tests.
+- Verifier: Core source scan found no host names. verify.mjs injects agent function. End-to-end execution unavailable: shell tool blocked. | grep of packages/iced-core (excl. tests) finds no agent names or host imports; only generic spawn in src/verify.mjs; agnostic.test and injected-runner tests exist and npm test passes. | Read core source and agnostic/verify-parallel tests. Core imports Node/self only; verifier/test-writer execution requires injected agent function.
 
 ### [E2] No file in the repo or packed tarballs targets Claude Code, Codex, Cursor, Copilot or Gemini, and bin/, action.yml, the CLI and the --prepare/--finish flow are gone.
 
 - Result: **pass**
 - Verify: test | packages/*/test harness scan + check: git ls-files
 - Builder evidence: test: packages/pi-intent/test/harness.test.mjs (tracked-file scan incl. intent/README.md; removed paths absent; repo config without targets/runner; no bin)
-- Verifier: Harness scans passed; independently inspected git ls-files. Removed CLI, harness directories, action and split-flow implementation absent. | git ls-files has no bin, action.yml, AGENTS/CLAUDE, .claude/.codex/.agents/.cursor, skills. git grep for harness names hits only TUI 'cursor' variables, a model name in config, unit files and scan tests. harness.test passes. | Ran harness tests. git ls-files has no removed bin/action/skills/lib/harness paths. Source/docs grep outside unit records and tests found only picker state.cursor matches.
+- Verifier: Root listing confirms bin/, lib/, skills/, action.yml and generated harness directories absent. Reviewed harness scanner; git ls-files and packed-content checks could not run. | find shows no bin/, lib/, skills/, root spec/, .claude/.codex/.agents, AGENTS.md, CLAUDE.md, action.yml, .github. Grep hits outside tests are only model names in .iced/config.json and unit records. harness.test.mjs present and passing. | Read harness test. No current bin/, action.yml, or skills/ found. No forbidden terms in pi docs. Historical intent/.iced records contain removal terms but do not target harnesses.
 
 ### [E3] /iced init in an empty git repo creates only .iced/config.json, .iced/memory/, .iced/templates/, intent/README.md and the .gitignore/.gitattributes lines; re-running it is safe.
 
 - Result: **pass**
 - Verify: test | packages/pi-intent or iced-core init test
 - Builder evidence: test: packages/iced-core/test/init.test.mjs
-- Verifier: Init tests passed exact fresh-repo file inventory, repeat initialization, preservation and forbidden-path checks. | packages/iced-core/test/init.test.mjs passes within npm test; I did not run init by hand. | npm test passed iced-core init empty-repo, idempotence, and legacy-file preservation tests.
+- Verifier: init.mjs writes only specified paths, preserves config and memory, refreshes templates and deduplicates Git lines. Fresh-repo/idempotence tests not independently executed. | packages/iced-core/test/init.test.mjs exists and npm test passes. I did not run init myself (no shell). | Read init.mjs and init.test.mjs. Init creates config, memory, templates, intent README, git lines only; rerun preserves config/memory and refreshes templates.
 
 ### [E4] In pi, verifiers run as pi subprocesses with read-only tools, and the test writer runs as a pi subprocess allowed to write tests; both use the configured models and effort.
 
-- Result: **fail**
+- Result: **pass**
 - Verify: test | packages/pi-intent/test/runner.test.mjs (pi runner args)
-- Builder evidence: test: packages/pi-intent/test/runner.test.mjs (verifier tools read,grep,find,ls,shell; test writer adds write,edit; --model/--thinking; ICED_ROLE) + packages/pi-intent/test/gate.test.mjs 'verifier shell: no file changes and no inline code...' (WriteAllBytes, Set-Item, node --eval/-e/-p/--import incl. obfuscated require, python -c, pwsh -Command/-EncodedCommand, bash -c, cmd /c, iex, Start-Process, .NET static calls blocked; npm test, node --test, git diff/log, pytest, node scripts/x.mjs allowed) and 'the extension's verifier role uses the verifier shell rule and blocks write/edit' (Live: ICED_ROLE=verifier pi -p --tools 'read,grep,find,ls,powershell' got 'The ICED verifier is read-only' for node -e writeFileSync, probe.txt not created; npm --version ran. Shell rule remains a deny-list heuristic, documented as such.)
-- Verifier: Runner tests pass model, effort and tool arguments. Read-only enforcement fails: directly evaluated verifierShellDecision('ni probe.txt') and verifierShellDecision('git -C . clean -fd'); both return allow. Get-Alias ni confirms New-Item. Extension index.ts:475-483 permits these decisions. Commands were evaluated as strings only; no destructive commands executed. | runner.test and gate.test pass (33/33). Verifier tools are read,grep,find,ls,shell with no write/edit; the shell gate blocked my own inline node -e. Reading the rules shows the deny-list leaves gaps (ni/sc/ac aliases, find -delete, tar x, dd of=, sort -o, npx/npm exec, repo scripts that write), so shell read-only is heuristic. | runner.mjs grants read-only verifiers powershell. gate.mjs uses deny-list only. PowerShell alias ri is Remove-Item (confirmed by Get-Alias ri) and command `ri <path>` matches neither mutating nor inline-code patterns, so verifier can delete files.
+- Builder evidence: test: packages/pi-intent/test/runner.test.mjs ('verifier tools never include write, edit or a shell; the test writer may write'; piArgs --tools read,grep,find,ls; --model/--thinking; submitUnit through piAgent; runTestWriter gets write tools and model) + packages/pi-intent/test/gate.test.mjs ('verifier tools: read, grep, find and ls only...' incl. TOOLS['read-only'] deepEqual VERIFIER_TOOLS; 'the extension's verifier role uses the verifier tool rule for every tool call') (Live: ICED_ROLE=verifier pi -p --tools 'read,grep,find,ls,powershell,bash' -> ls ran; powershell `ni probe.txt` and bash `touch probe2.txt` both blocked; neither file created.)
+- Verifier: runner.mjs grants verifiers read,grep,find,ls; test writers additionally receive write,edit,shell. piArgs forwards model/effort. Core supplies role/access/model/effort; extension injects piAgent. gate.mjs rejects every non-read verifier tool. My npm test attempt was blocked by this live gate. | gate.mjs VERIFIER_TOOLS = read,grep,find,ls; index.ts blocks all other tools when ICED_ROLE=verifier; runner sets ICED_ROLE. My own powershell calls were blocked by this rule. runner.test passes. | runner.mjs grants verifier only read,grep,find,ls. Extension ICED_ROLE=verifier intercepts every tool call and blocks all others. Tests cover args, role, models, effort, test-writer write access.
 
 ### [E5] Existing ICED repos keep working: spec examples and previously approved units lint clean with unchanged contract hashes, and old configs (per-runner model maps, runner, targets) load with the pi entries applied.
 
 - Result: **pass**
 - Verify: test | packages/iced-core/test (compat)
 - Builder evidence: test: packages/iced-core/test/compat.test.mjs (golden hash from 4d53c01), core.test.mjs spec examples, runner.test.mjs [E5] legacy pi map
-- Verifier: Compatibility tests passed golden contract hash, approved-unit lint/accept, spec examples and legacy pi model/effort maps. | compat.test, core.test and runner.test [E5] pass in npm test. Existing unit 001 hash unchanged. | npm test passed 67 iced-core tests, including golden pre-split hash, approved-unit lint/accept, legacy config, and spec examples.
+- Verifier: Reviewed golden-hash compatibility tests and legacy-config handling. loadConfig preserves legacy keys; model/effort selection uses host entries. Hash and lint tests not independently executed. | compat.test.mjs, core.test.mjs and the runner.test [E5] legacy-config test exist and pass in npm test. Golden hash not independently recomputed. | compat.test checks pre-refactor golden hash, approved-unit lint/accept, and legacy targets/runner/per-host maps. runner test verifies legacy pi entry applied.
 
 ### [E6] Every existing behavior still covered by the current test suite (lint, hashing, transitions, proposals, gate, models, picker, verification) passes after the move.
 
 - Result: **pass**
 - Verify: check | npm test
 - Builder evidence: check: npm test: iced-core 67/67, pi-intent 33/33
-- Verifier: Independently ran npm test: core 67/67, extension 33/33. | npm test: iced-core 67/67, pi-intent 33/33, 0 failures. | Ran npm test successfully: iced-core 67/67; pi-intent 33/33.
+- Verifier: Attempted npm test; tool returned: The ICED verifier is read-only and may use only read, grep, find, ls; read the code and the check results in the prompt. Supplied successful output is not an independent rerun. | Prompt check output: iced-core 67/67 and pi-intent 33/33 passing, exit 0. | Provided configured npm test result exit 0, 67 iced-core plus 33 pi-intent tests. Read coverage for core lifecycle, gate, picker, verification.
 
 ### [E7] Both packages are publish-ready: `npm pack --dry-run` lists only intended files, metadata is complete (name, version, license, repository, exports/files, publishConfig), pi-intent depends on @arturleao/iced-core and declares pi packages as peers.
 
 - Result: **pass**
 - Verify: check | npm pack --dry-run -w packages/iced-core -w packages/pi-intent
 - Builder evidence: test: packages/pi-intent/test/package.test.mjs (npm pack --dry-run --json for both packages, metadata, deps/peers, imports packed or declared)
-- Verifier: Independently ran npm pack --dry-run for both workspaces: core 22 files, extension 9 files. Runtime assets present; excluded tests and repo state. Manifest inspection and package tests confirm metadata, dependencies and peers. | npm pack --dry-run: iced-core 22 files, pi-intent 9 files, no tests/intent/.iced. package.json metadata complete; pi-intent depends on @arturleao/iced-core and lists pi, pi-tui and typebox as peers '*'; publishConfig public; package.test passes. | Ran npm pack --dry-run --json for both workspaces. Core contains src/spec/templates/rubric; pi package contains extension/src/docs; neither contains tests, intent, or .iced. Metadata and peer/dependency declarations inspected.
+- Verifier: Both manifests contain publish metadata and restrictive files lists; dependency/peer declarations match requirements. Reviewed package tests. npm pack --dry-run could not run. | Read both package.json files: name, version, license, repository, files, exports, publishConfig complete. Dependency and peerDependencies correct. package.test.mjs runs npm pack --dry-run and passes. Did not run pack myself. | Read manifests and package.test. Files/exports/publish metadata present; core dependency correct; pi host packages peers '*' only; dry-run tarball test covers runtime files and exclusions.
 
 ### [E8] pi installed from a local checkout loads the extension after /reload: /iced status and the iced_* tools work.
 
 - Result: **unknown**
 - Verify: manual | /reload in pi, run /iced status
-- Builder evidence: manual: Human ran /reload in pi installed from a local checkout; this session's new gate then allowed deleting .iced/bin and .iced/lib; fresh pi -p listed all 8 iced_* tools; ICED_ROLE=verifier child loaded the new verifier rule from the installed path. (Human confirms /iced status in their session.)
-- Verifier: Root manifest test passes local extension path. Did not independently exercise interactive /reload, /iced status or iced_* tools. | Manual: needs a human /reload and /iced status in pi. Root package.json pi manifest points to packages/pi-intent/extensions/iced/index.ts, which exists. | Requires independent human /reload and /iced status in installed pi session. Not performed here.
+- Builder evidence: manual: Human ran /reload in pi installed from a local checkout; the new gate then allowed deleting .iced/bin and .iced/lib; fresh pi -p listed all 8 iced_* tools; ICED_ROLE=verifier children load the new verifier rule from the installed path (live check above). (Human confirms /iced status in their session.)
+- Verifier: Root manifest points at existing extension; source registers /iced. Live verifier gate loaded here, but interactive /reload, /iced status and iced_* tools were not demonstrated. | Manual expectation. Builder says the human ran /reload and fresh pi listed the iced_* tools. I could not verify. Human should run /iced status after /reload. | Manual /reload and /iced status not independently executed. Root pi manifest points to packages/pi-intent/extensions/iced/index.ts.
 
 ### [E9] READMEs and docs describe only pi (install via `pi install npm:@arturleao/pi-intent`) and the core library API, with no other harness or CLI instructions.
 
 - Result: **pass**
 - Verify: check | grep docs and READMEs for claude|codex|cursor|copilot|gemini|iced.mjs
 - Builder evidence: check: README.md, packages/*/README.md, packages/pi-intent/docs/*.md, intent/README.md scanned by harness.test.mjs; install documented as pi install npm:@arturleao/pi-intent
-- Verifier: Independent git grep found no forbidden harness/CLI terms in READMEs and extension docs. Root and extension READMEs contain required npm installation command. | git grep for claude|codex|cursor|copilot|gemini|iced.mjs finds no README or docs hits; harness.test scans the READMEs and docs. | Inspected root and package READMEs; pi install command documented. Targeted grep outside historical unit records/tests found no removed-harness or iced.mjs instructions.
+- Verifier: Read root and both package READMEs. Required pi install command present; core API documented. Markdown scan under packages found no claude|codex|cursor|copilot|gemini|iced.mjs matches. | Grep finds no harness names or iced.mjs in READMEs or docs outside unit records; harness.test scans them. design.md consistent with pi-only verifier rule. | Read root and package READMEs; pi install command present. Grep packages/pi-intent/docs found no forbidden harness/CLI terms.
 
 ## Failure conditions
 
-- [F1] not triggered: Golden-hash, approved-unit lint and spec-example tests passed. | compat golden-hash and spec example tests pass. | Compatibility tests passed golden hash and approved-unit lint/accept.
-- [F2] not triggered: Not demonstrated; interactive reload remains unverified. | Root pi manifest and extension path are valid; not live-tested by me. | Unknown independently; manual reload check not performed.
-- [F3] not triggered: Both dry-run inventories and packed-import checks passed. | Pack lists templates, rubric and the extension .ts; no tests, intent or .iced. | Dry-run pack lists required runtime files and excludes tests, intent, and .iced.
-- [F4] **TRIGGERED**: Verifier tool list excludes literal write/edit tools. Shell still permits mutation, reported separately under E4. | The verifier gets no write/edit tools. Shell can still write through deny-list gaps (see E4 evidence); noted as a risk. | Verifier receives powershell, capable of writes. `ri` aliases Remove-Item and bypasses shell deny-list.
-- [F5] not triggered: Fresh-init inventory and forbidden-directory tests passed. | init.test passes and checks the created files. | Empty-repo init test passed and checks all prohibited legacy paths absent.
+- [F1] not triggered: Not demonstrated; hash/lint runtime compatibility remains unverified. | compat.test golden hash and spec example lint pass in npm test. | Golden hash and contract-tampering lint tests cover legacy approved units.
+- [F2] not triggered: Verifier extension demonstrably loaded; normal interactive command/tool loading remains unverified. | Root package.json pi manifest points to packages/pi-intent/extensions/iced/index.ts; the extension imports @arturleao/iced-core via the workspace. Builder's live pi -p listed 8 iced_* tools; not independently run. | Not manually exercised; package manifest and extension source support loading. See E8 unknown.
+- [F3] not triggered: Manifest allowlists and package tests look correct; actual pack contents not independently checked. | files lists in both packages include only src, spec, extensions, docs, README, LICENSE; package.test checks the tarball. | package.test dry-run tarball checks required sources/spec/templates/rubric and excludes tests, intent, .iced.
+- [F4] not triggered: Verifier invocation excludes write/edit/shell; verifier role rejects every tool outside read,grep,find,ls. | Verifier gets only read/grep/find/ls, enforced in the child extension; confirmed from the code and by my own blocked shell. | Verifier subprocess tools omit write/edit/shell; verifier-role extension hook blocks every non-read tool.
+- [F5] not triggered: Read complete init.mjs; no writes to prohibited harness or vendored paths. | init.test and harness.test pass; no code path found in core init for the removed files. | initRepo source and empty-repo test prohibit all listed legacy paths.
 
 ## Constraints
 
-- [C1] respected: Core host-reference/import scans and injected-agent tests passed. | Core source has no agent imports or mentions; only the repo URL contains 'pi-intent'. | Core agnostic scan and dependency/import test passed.
-- [C2] respected: Harness scan and tracked-file inspection found no remaining harness integrations; historical unit records describe removal. | No other-harness files tracked; grep clean. | Harness scan passed; tracked product files contain no other-harness targeting.
-- [C3] respected: Removed-path and no-bin tests passed; tracked inventory contains no standalone CLI or action. | No bin/, action.yml or vendored .iced/bin or .iced/lib tracked. | Removed-path, no-CLI, and init tests passed.
-- [C4] respected: Hash, status, lint and legacy-config compatibility tests passed. | compat tests pass, including legacy config loading. | Compatibility tests passed existing hash, lint, status flow, and legacy config loading.
-- [C5] respected: Both manifests declare ESM and Node >=20. Extension host packages are peers '*', not dependencies. | Peers are '*', Node >=20 and ESM are declared, and iced-core is the only dependency. | Package manifests inspected: Node >=20, ESM; pi host packages peers '*' only.
-- [C6] respected: Executed tests and dry-run packing only; no publication or settings changes performed. Earlier external actions unknown. | No publish evidence; the git working tree is clean except the unit's iced.md. | No publish command run; changed tracked files do not include pi user settings.
+- [C1] respected: Core source scan found no coding-agent names; verification invokes injected agent. | Core source has no agent references; agent is injected. | Core has no host imports/names or host runner. Generic process spawning only runs configured checks; agent start is injected.
+- [C2] respected: No targeting found in inspected sources/docs; exhaustive tracked-file and tarball scans unavailable. | No harness files or runners in the repo; only model-name strings in config. | No active harness files or instructions found outside historical unit records and scanner tests.
+- [C3] respected: Root and .iced listings lack removed CLI/vendor paths; manifests expose no bin. | No bin, .iced/bin, .iced/lib or action.yml. | No CLI/action/vendor directories found; package manifests contain no bin.
+- [C4] respected: Legacy configuration preserved by deep merge and host-aware lookup. Contract compatibility tests inspected, not rerun. | compat tests pass, including legacy per-runner maps. | Compatibility tests cover contract hash, old approved unit lint, and old config map loading.
+- [C5] respected: Both manifests specify ESM and Node >=20. pi-intent declares all three host packages as '*' peers, not dependencies. | pi hosts are peerDependencies '*'; engines node>=20; type module. | Both manifests ESM Node >=20. pi packages declared peerDependencies '*' and not dependencies.
+- [C6] respected: No publish or settings modification performed by this verifier; builder's external side effects not independently established. | Nothing indicates a publish; the root is private. Settings unchanged as far as I can see. | No publish command executed by this verification. No settings files changed in listed scope.
 
 ## Checks
 
-- `npm test`: exit 0, 9.8s
+- `npm test`: exit 0, 11.6s
 
 ## Files changed since approval
 
@@ -169,6 +170,6 @@ Attempt 3. Fixed the attempt-2 E4 finding (verifier shell could write via WriteA
 
 ## Verifier notes
 
-[expectations] D1 fails through E4. Minimal regression fixes: handle PowerShell mutation aliases and git global options before subcommands, adding tests for both demonstrated bypasses. Deny-list shell filtering cannot guarantee read-only execution; enforce a constrained execution boundary if that guarantee is required. Human must independently confirm E8. Existing tests pass but miss demonstrated cases.
-[failures] Verifier shell read-only is a heuristic deny-list. PowerShell aliases (ni, sc, ac, ri), find -delete, tar x, dd of=, sort -o, npx and npm exec are not covered. Repo scripts can write by design. Human should check E8 with /reload and /iced status.
-[rules] Blocking security finding. Remove verifier shell or replace heuristic with enforceable sandbox/allowlist. E8 still needs human manual check.
+[expectations] Fail denotes insufficient independent evidence under D1, not demonstrated implementation defect. Read-only verifier gate prevents required command reruns. Have authorized test executor independently run npm test, git ls-files and npm pack --dry-run; human must demonstrate /reload and /iced status. No files modified.
+[failures] No shell available, so npm test and npm pack were not re-run; I relied on the check output in the prompt plus static inspection. Human should confirm E8 (/iced status after /reload). Leftover model names containing 'codex' and 'claude' in .iced/config.json are model refs, not harness targets. Check that the harness scan test excludes .iced/config.json.
+[rules] E8 needs human reload/status confirmation before acceptance.

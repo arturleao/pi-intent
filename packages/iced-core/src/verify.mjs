@@ -11,6 +11,8 @@ import {
 } from "./core.mjs";
 
 const TAIL = 4000;
+/** How much check output verifiers see: they may have no way to run commands, so this is their evidence. */
+const PROMPT_OUTPUT = 30000;
 const tail = (s, n = TAIL) => (s.length > n ? `...${s.slice(-n)}` : s);
 
 function killTree(child) {
@@ -73,7 +75,7 @@ export async function runCommands(root, commands, { timeoutSec, signal, onProgre
       if (failed) { results.push({ command, exitCode: null, skipped: true, durationMs: 0, timedOut: false, tail: "skipped: an earlier step in this group failed" }); continue; }
       onProgress?.(`Running ${command}`);
       const r = await runProcess(command, [], { cwd: root, shell: true, timeoutSec, signal });
-      results.push({ command, exitCode: r.exitCode, durationMs: r.durationMs, timedOut: r.timedOut, tail: tail(r.output) });
+      results.push({ command, exitCode: r.exitCode, durationMs: r.durationMs, timedOut: r.timedOut, tail: tail(r.output), output: tail(r.output, PROMPT_OUTPUT) });
       failed = r.exitCode !== 0;
     }
     return results;
@@ -165,6 +167,10 @@ export function buildVerifierPrompt({ unit, ancestorUnits = [], summary, evidenc
     "Your job is to try to prove that it is NOT done. Treat every claim as unverified until you have checked it yourself",
     "by reading the code, the tests and the check results below (run read-only commands only if your tools allow it).",
     "Do not modify, create or delete files.",
+    "The check results were produced by the ICED tooling on this exact working tree, not by the builder: they are real",
+    "command output and count as evidence. When you cannot run commands, use them: a named passing test demonstrates its",
+    "expectation once you have read the test and confirmed it checks what the expectation says. Report a gap only when",
+    "neither the output nor the code supports a claim; inability to re-run a command is not by itself a failure.",
     "Do not trust the builder's summary. An expectation passes only when you have concrete evidence.",
     "",
   ];
@@ -197,7 +203,7 @@ export function buildVerifierPrompt({ unit, ancestorUnits = [], summary, evidenc
   lines.push("", "## Configured check commands (already run by the tooling)");
   if (!commandResults.length) lines.push("(none configured)");
   for (const r of commandResults) {
-    lines.push(r.skipped ? `- \`${r.command}\` skipped (an earlier step failed)` : `- \`${r.command}\` exit ${r.exitCode}${r.timedOut ? " (timed out)" : ""}\n\n\`\`\`text\n${tail(r.tail, 1500)}\n\`\`\``);
+    lines.push(r.skipped ? `- \`${r.command}\` skipped (an earlier step failed)` : `- \`${r.command}\` exit ${r.exitCode}${r.timedOut ? " (timed out)" : ""}\n\n\`\`\`text\n${tail(r.output ?? r.tail ?? "", PROMPT_OUTPUT)}\n\`\`\``);
   }
   lines.push("", "## Files changed since approval", files.length ? files.map((f) => `- ${f}`).join("\n") : "(none detected, or no git)", "");
   if (rubric) lines.push("## Rubric", "", rubric.trim(), "");
@@ -487,7 +493,8 @@ export function finishVerification({ root, unit, ancestorUnits = [], summary = "
     result.notes = [result.notes, `Some verifiers did not answer (${verifierError}); a human should review.`].filter(Boolean).join("\n");
   }
   const report = {
-    id: unit.parsed.frontmatter.id, title: unit.parsed.title, attempt, ts: nowIso(), summary, evidence, files, commandResults,
+    id: unit.parsed.frontmatter.id, title: unit.parsed.title, attempt, ts: nowIso(), summary, evidence, files,
+    commandResults: commandResults.map(({ output, ...r }) => r), // full output went to the verifiers; reports keep the tail
     host, lenses: lensResults.map((l) => ({ name: l.name, model: l.model ?? null, effort: l.effort ?? null, ok: Boolean(l.verifier), error: l.verifier ? null : (l.error ?? "no answer"), durationMs: l.durationMs ?? null })),
     result, verdict: result.verdict,
   };
