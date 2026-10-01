@@ -841,6 +841,9 @@ export default function iced(pi: ExtensionAPI) {
       } finally {
         refreshStatus(ctx);
       }
+      if (res.outcome === "invalid-contract") {
+        return textResult(`Submission blocked before verification. Resolve contract errors through human-approved ICED steps; no attempt was consumed:\n${res.errors.map((e: any) => `- ${e.unit}: ${e.code}: ${e.message}`).join("\n")}`, res);
+      }
       if (res.outcome === "missing-evidence") {
         return textResult(`Evidence is missing for ${res.missing.join(", ")}. Meet those expectations and submit evidence for every one.`);
       }

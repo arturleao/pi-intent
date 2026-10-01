@@ -57,6 +57,17 @@ test("the extension's verifier role uses the verifier tool rule for every tool c
   assert.match(block, /\breturn;\s*\}\s*$/);
 });
 
+test("extension: invalid submission reports errors before success report handling", () => {
+  const src = fs.readFileSync(fileURLToPath(new URL("../extensions/iced/index.ts", import.meta.url)), "utf8");
+  const start = src.indexOf('if (res.outcome === "invalid-contract")');
+  const report = src.indexOf("const report = res.report;", start);
+  assert.ok(start > 0 && report > start);
+  const block = src.slice(start, src.indexOf('if (res.outcome === "missing-evidence")', start));
+  assert.match(block, /return textResult/);
+  assert.match(block, /no attempt was consumed/);
+  assert.match(block, /e\.unit.*e\.code.*e\.message/);
+});
+
 test("changedProtectedKeys", () => {
   const a = unitText();
   assert.deepEqual(changedProtectedKeys(a, a.replace("status: draft", "status: approved")), ["status"]);

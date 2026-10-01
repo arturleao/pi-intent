@@ -27,7 +27,8 @@ const sleep = (ms) => `node -e "setTimeout(() => {}, ${ms})"`;
 
 function repoWithUnit(fm = {}, verify = {}) {
   const root = tempRepo({ git: true, config: { verify: { commands: [], ...verify } } });
-  writeUnit(root, "001-dark-mode", unitText({ status: "building", ...fm }));
+  const text = unitText({ status: "building", ...fm });
+  writeUnit(root, "001-dark-mode", core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
   return root;
 }
 
@@ -151,6 +152,43 @@ test("submitUnit: missing evidence and wrong status", async (t) => {
   assert.equal(core.readUnit(root, "001-dark-mode").parsed.frontmatter.status, "building");
   writeUnit(root, "002-other", unitText({ id: "002-other", status: "draft" }));
   await assert.rejects(submitUnit({ root, id: "002-other", evidence }), /only a building unit/);
+});
+
+test("submitUnit: invalid own and ancestor contracts stop before any work", async (t) => {
+  for (const target of ["own", "ancestor"]) {
+    for (const invalid of ["changed", "missing-hash", "duplicate", "invalid-field"]) {
+      const root = repoWithUnit({ attempts: 2 }, { commands: ['node -e "require(\'fs\').writeFileSync(\'check-ran\',\'yes\')"'] });
+      t.after(() => cleanup(root));
+      const id = "001-dark-mode";
+      let unit = core.readUnit(root, id);
+      let badId = id;
+      if (target === "ancestor") {
+        badId = "002-parent";
+        const text = unitText({ id: badId, status: "approved", type: "project" });
+        writeUnit(root, badId, core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
+        core.updateFrontmatter(root, id, { parent: badId });
+        unit = core.readUnit(root, badId);
+      }
+      let bad = unit.text;
+      if (invalid === "changed") bad = bad.replace("Toggle switches theme without reload.", "Changed expectation.");
+      if (invalid === "missing-hash") bad = core.setFrontmatter(bad, { contract_hash: null });
+      if (invalid === "duplicate") bad += "\n## Expectations\n";
+      if (invalid === "invalid-field") bad = core.setFrontmatter(bad, { risk: "invalid" });
+      core.writeUnitText(root, badId, bad);
+      const before = core.readUnit(root, id).text;
+      let called = false;
+      const res = await submitUnit({ root, id, evidence, agent: async () => { called = true; throw new Error("should not run"); } });
+      assert.equal(res.outcome, "invalid-contract", `${target}: ${invalid}`);
+      assert.ok(res.errors.some((e) => e.unit === badId && e.message));
+      assert.equal(called, false);
+      assert.equal(fs.existsSync(path.join(root, "check-ran")), false);
+      assert.equal(core.readUnit(root, id).text, before);
+      assert.equal(core.readUnit(root, id).parsed.frontmatter.attempts, 2);
+      assert.equal(fs.existsSync(core.unitPaths(root, id).verify), false);
+      assert.equal(fs.existsSync(core.unitPaths(root, id).evidence), false);
+      assert.deepEqual(core.readMetrics(root), []);
+    }
+  }
 });
 
 test("submitUnit without an agent: no independent verification, a human must review", async (t) => {

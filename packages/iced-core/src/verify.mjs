@@ -7,7 +7,7 @@ import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 import {
   PACKAGE_ROOT, acceptUnit, ancestors, appendMetric, effectiveAutonomy, getActive, git, loadConfig, nowIso,
-  normalizeDir, readUnit, setActive, splitEffort, transition, unitPaths, verifyEffort, verifyModels,
+  normalizeDir, readUnit, setActive, splitEffort, transition, unitPaths, verifyEffort, verifyModels, lintIced,
 } from "./core.mjs";
 
 const TAIL = 4000;
@@ -591,6 +591,10 @@ export async function submitUnit({ root, id, summary = "", evidence = [], signal
   const unit = readUnit(root, id);
   const fm = unit.parsed.frontmatter;
   if (fm.status !== "building") throw new Error(`${id} is ${fm.status}; only a building unit can be submitted.`);
+  const ancestorUnits = ancestors(root, id);
+  const errors = [unit, ...ancestorUnits].flatMap((u) =>
+    lintIced(u.parsed, "validate", u.text).errors.map((e) => ({ ...e, unit: u.id })));
+  if (errors.length) return { outcome: "invalid-contract", errors };
   const missing = missingEvidence(unit, evidence);
   if (missing.length) return { outcome: "missing-evidence", missing };
   const config = loadConfig(root);
@@ -599,7 +603,7 @@ export async function submitUnit({ root, id, summary = "", evidence = [], signal
   let report;
   try {
     report = await verifyUnit({
-      root, unit: readUnit(root, id), ancestorUnits: ancestors(root, id), config, summary, evidence, attempt,
+      root, unit: readUnit(root, id), ancestorUnits, config, summary, evidence, attempt,
       signal, onProgress, agent, host, runVerifierImpl, defaultModel, defaultEffort,
     });
   } catch (error) {
