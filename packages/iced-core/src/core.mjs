@@ -251,6 +251,14 @@ export function lintIced(parsed, stage = "validate", text, opts = {}) {
   }
   if (fm.id != null && !/^\d{3,}-[a-z0-9-]+$/.test(String(fm.id))) err("field-invalid", "`id` must look like `042-short-slug`.");
 
+  const seenSections = new Set();
+  for (const heading of parsed.sections ?? []) {
+    const name = heading.trim().toLowerCase();
+    if (!Object.hasOwn(H2, name)) continue;
+    if (seenSections.has(name)) err("section-duplicate", `Canonical section \`${heading}\` appears more than once.`);
+    seenSections.add(name);
+  }
+
   const seen = new Map();
   for (const item of [...parsed.constraints, ...parsed.failures, ...parsed.expectations, ...parsed.questions]) {
     if (seen.has(item.id)) err("ids-duplicate", `Item id [${item.id}] is used more than once.`, item.line);
