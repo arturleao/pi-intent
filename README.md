@@ -25,12 +25,9 @@ The root `package.json` is a private workspace root whose `pi` manifest points a
 `packages/pi-intent/extensions/iced/index.ts`, so pi can load the extension straight from a checkout:
 `pi install <path to this repo>`, then `/reload` after changes.
 
-Publishing (core first, since pi-intent depends on it):
-
-```powershell
-npm publish -w packages/iced-core
-npm publish -w packages/pi-intent
-```
+Releasing: both packages share one version. `npm run release -- <major|minor|patch>` then
+`git push --follow-tags`; the `v*` tag publishes to npm (trusted publishing, provenance) and creates the
+GitHub release. Commit conventions, versioning and repo hygiene rules: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
