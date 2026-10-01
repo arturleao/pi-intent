@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/arturleao/pi-intent/spec/iced.schema.json",
+  "title": "ICED unit frontmatter",
+  "description": "Frontmatter of intent/<id>/iced.md (ICED spec 0.1).",
+  "type": "object",
+  "required": ["iced", "id", "title", "type", "tier", "status", "autonomy", "risk"],
+  "additionalProperties": true,
+  "$defs": {
+    "id": { "type": "string", "pattern": "^\\d{3,}-[a-z0-9-]+$" },
+    "status": { "enum": ["draft", "approved", "building", "verifying", "done", "accepted", "blocked", "rejected"] },
+    "nullableString": { "type": ["string", "null"] }
+  },
+  "properties": {
+    "iced": { "type": ["string", "number"], "description": "Spec version" },
+    "id": { "$ref": "#/$defs/id" },
+    "title": { "type": "string", "minLength": 1 },
+    "type": { "enum": ["project", "feature", "bug", "review", "chore"] },
+    "tier": { "enum": ["S", "M", "L", "XL"] },
+    "parent": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "status": { "$ref": "#/$defs/status" },
+    "autonomy": { "type": "integer", "minimum": 0, "maximum": 3 },
+    "risk": { "enum": ["low", "medium", "high"] },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "created": { "$ref": "#/$defs/nullableString" },
+    "approved_at": { "$ref": "#/$defs/nullableString" },
+    "approved_by": { "$ref": "#/$defs/nullableString" },
+    "contract_hash": { "oneOf": [{ "type": "string", "pattern": "^[0-9a-f]{64}$" }, { "type": "null" }] },
+    "base_ref": { "$ref": "#/$defs/nullableString" },
+    "accepted_at": { "$ref": "#/$defs/nullableString" },
+    "accepted_by": { "$ref": "#/$defs/nullableString" },
+    "blocked_from": { "oneOf": [{ "$ref": "#/$defs/status" }, { "type": "null" }] }
+  }
+}
