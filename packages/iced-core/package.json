@@ -1,0 +1,29 @@
+{
+  "name": "@arturleao/iced-core",
+  "version": "0.1.0",
+  "description": "ICED (Intent, Context, Expectations, Done): host-neutral core library for intent-driven development with independent verification",
+  "type": "module",
+  "license": "MIT",
+  "author": "Artur Leao",
+  "repository": { "type": "git", "url": "git+https://github.com/arturleao/pi-intent.git", "directory": "packages/iced-core" },
+  "homepage": "https://github.com/arturleao/pi-intent/tree/main/packages/iced-core#readme",
+  "bugs": "https://github.com/arturleao/pi-intent/issues",
+  "keywords": ["iced", "idsd", "intent-driven", "agents", "verification"],
+  "engines": { "node": ">=20" },
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./core": "./src/core.mjs",
+    "./verify": "./src/verify.mjs",
+    "./init": "./src/init.mjs",
+    "./guard": "./src/guard.mjs",
+    "./spec/*": "./spec/*",
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "spec", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "validate:examples": "node test/validate-examples.mjs"
+  },
+  "publishConfig": { "access": "public" }
+}

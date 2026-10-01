@@ -1,0 +1,54 @@
+{
+  "iced": "0.1",
+  "gate": "strict",
+  "autonomy": 1,
+  "maxAutonomy": 3,
+  "autonomyByRisk": {
+    "low": null,
+    "medium": null,
+    "high": null
+  },
+  "questions": {
+    "max": 5
+  },
+  "verify": {
+    "commands": [
+      "npm test"
+    ],
+    "parallel": true,
+    "maxAttempts": 3,
+    "independent": true,
+    "runner": "auto",
+    "lenses": "auto",
+    "model": {
+      "pi": [
+        "openai-codex/gpt-6-astra",
+        "anthropic/claude-sonnet-5-5",
+        "openai-codex/gpt-5.6-terra"
+      ]
+    },
+    "effort": null,
+    "timeoutSec": 900
+  },
+  "build": {
+    "testWriter": false,
+    "testWriterModel": null,
+    "testWriterEffort": null
+  },
+  "memory": {
+    "product": ".iced/memory/product.md",
+    "knowledge": [
+      ".iced/memory/knowledge.md"
+    ]
+  },
+  "promotion": {
+    "mode": "suggest",
+    "window": 10
+  },
+  "targets": [
+    "agents",
+    "claude",
+    "codex",
+    "skills"
+  ]
+}

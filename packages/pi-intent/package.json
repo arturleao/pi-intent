@@ -1,0 +1,29 @@
+{
+  "name": "@arturleao/pi-intent",
+  "version": "0.1.0",
+  "description": "ICED for pi: one-line intent, a few questions, human sign-off, autonomous build, independent verification",
+  "type": "module",
+  "license": "MIT",
+  "author": "Artur Leao",
+  "repository": { "type": "git", "url": "git+https://github.com/arturleao/pi-intent.git", "directory": "packages/pi-intent" },
+  "homepage": "https://github.com/arturleao/pi-intent/tree/main/packages/pi-intent#readme",
+  "bugs": "https://github.com/arturleao/pi-intent/issues",
+  "keywords": ["pi-package", "pi", "iced", "idsd", "intent-driven", "agents"],
+  "engines": { "node": ">=20" },
+  "files": ["extensions", "src", "docs", "README.md", "LICENSE"],
+  "pi": {
+    "extensions": ["./extensions/iced/index.ts"]
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "@arturleao/iced-core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "publishConfig": { "access": "public" }
+}

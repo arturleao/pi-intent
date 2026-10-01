@@ -1,27 +1,16 @@
 {
-  "name": "pi-intent",
-  "version": "0.1.0",
+  "name": "iced-monorepo",
   "private": true,
-  "description": "ICED (Intent, Context, Expectations, Done): intent-driven development for pi and any coding agent",
+  "description": "Workspace root for @arturleao/iced-core and @arturleao/pi-intent. Not published. The pi manifest lets pi load the extension straight from a checkout (pi install <path to this repo>).",
   "type": "module",
   "license": "MIT",
-  "keywords": ["pi-package", "iced", "idsd", "intent-driven", "agents"],
   "engines": { "node": ">=20" },
-  "bin": {
-    "iced": "bin/iced.mjs",
-    "pi-intent": "bin/iced.mjs"
-  },
-  "files": ["bin", "lib", "extensions", "skills", "spec", "action.yml", "README.md", "LICENSE"],
-  "scripts": {
-    "test": "node --test \"test/*.test.mjs\"",
-    "validate:examples": "node test/validate-examples.mjs"
-  },
+  "workspaces": ["packages/iced-core", "packages/pi-intent"],
   "pi": {
-    "extensions": ["./extensions/iced/index.ts"]
+    "extensions": ["./packages/pi-intent/extensions/iced/index.ts"]
   },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*",
-    "typebox": "*"
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "pack:check": "npm pack --dry-run --workspaces"
   }
 }
