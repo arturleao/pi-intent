@@ -5,18 +5,18 @@ title: Pi-only ICED as two npm packages (agnostic core + pi extension)
 type: feature
 tier: L
 parent: null
-status: building
+status: accepted
 autonomy: 1
 risk: medium
-attempts: 1
+attempts: 2
 created: 2026-10-01T11:59:25Z
 approved_at: 2026-10-01T12:28:44Z
 approved_by: Artur Leao
 contract_hash: 063401c16a0b264deffd3d60b42fb53eb957da6fbf54b677bced2916cc3dbd2a
 base_ref: 4d53c01397587e4c6c3023b508b93d74d9128c3e
 blocked_from: null
-accepted_at: null
-accepted_by: null
+accepted_at: 2026-10-01T13:15:20Z
+accepted_by: Artur Leao
 ---
 
 # Pi-only ICED as two npm packages (agnostic core + pi extension)
