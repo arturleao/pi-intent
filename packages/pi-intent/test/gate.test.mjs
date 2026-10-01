@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 import * as core from "@arturleao/iced-core";
-import { changedProtectedKeys, classifyPath, gateDecision, isMutatingShell } from "../src/gate.mjs";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { changedProtectedKeys, classifyPath, gateDecision, isMutatingShell, verifierShellDecision } from "../src/gate.mjs";
 import { cleanup, tempRepo, unitText, writeUnit } from "../../iced-core/test/helpers.mjs";
 
 test("classifyPath", (t) => {
@@ -25,14 +27,41 @@ test("classifyPath", (t) => {
 });
 
 test("isMutatingShell", () => {
-  for (const c of ["echo x > a.txt", "rm -rf src", "git reset --hard", "git push --force origin main", "git push -f", "npm install lodash", "Set-Content a.txt x", "sed -i s/a/b/ f", "cp a b", "New-Item -Path x", 'git commit -m "x" && echo done > log.txt']) {
+  for (const c of ["echo x > a.txt", "rm -rf src", "git reset --hard", "git push --force origin main", "git push -f", "npm install lodash", "Set-Content a.txt x", "sed -i s/a/b/ f", "cp a b", "New-Item -Path x", 'git commit -m "x" && echo done > log.txt',
+    "[IO.File]::WriteAllBytes('a.bin', $b)", "[System.IO.File]::AppendAllLines('a', $l)", "Set-Item -Path a.txt -Value x", "Set-ItemProperty a.txt -Name IsReadOnly -Value $true",
+    "node --eval \"require('fs').writeFileSync('a','x')\"", "node -e \"fs.rmSync('src',{recursive:true})\"", "node -p \"require('fs').appendFileSync('a','x')\"",
+    "python -c \"open('a','w').write('x')\"", "python3 -c \"import pathlib; pathlib.Path('a').write_text('x')\"", "Invoke-WebRequest https://x -OutFile a.zip",
+    "curl -o a.zip https://x", "Expand-Archive a.zip -DestinationPath out", "Get-Process | Export-Csv p.csv"]) {
     assert.equal(isMutatingShell(c), true, c);
   }
   for (const c of ["npm test", "git status", "git diff HEAD", "ls -la", "cat a.txt", "node --test test/", "grep -r foo src 2>&1", "Get-Content a.txt",
     "git add -A", 'git add . && git commit -m "feat: picker -> combobox (E1 > E2)"', "git commit -m 'a > b'", "git push origin chore/iced-playground", "git tag v1.0.0",
-    "git commit -F - <<'EOF'\nfeat: x -> y\n\nE1 > E2\nEOF", 'git commit -m @"\nfeat: x -> y\n"@']) {
+    "git commit -F - <<'EOF'\nfeat: x -> y\n\nE1 > E2\nEOF", 'git commit -m @"\nfeat: x -> y\n"@',
+    "node -e \"console.log(require('fs').readFileSync('a','utf8'))\"", "python -c \"print(open('a').read())\"", "Get-Item a.txt", "curl https://x"]) {
     assert.equal(isMutatingShell(c), false, c);
   }
+});
+
+test("verifier shell: no file changes and no inline code; tests, builds, linters and git reads still run", () => {
+  for (const c of [
+    "rm -rf src", "echo x > a", "[IO.File]::WriteAllBytes('a', $b)", "Set-Item a -Value x",
+    "node --eval \"require('fs').writeFileSync('a','x')\"", "node -e \"globalThis['req'+'uire']('f'+'s').writeFileSync('a','x')\"",
+    "node -p 1", "node --import ./x.mjs", "python -c \"__import__('os').system('x')\"", "perl -e 'print 1'", "ruby -e 'p 1'",
+    "pwsh -Command Remove-Item a", "powershell -EncodedCommand AAAA", "bash -c 'rm a'", "cmd /c del a", "iex $s",
+    "Invoke-Expression $s", "Start-Process notepad", "[System.Net.WebClient]::new()", "[Convert]::FromBase64String('x')",
+    "New-Object System.IO.StreamWriter a", "eval \"$x\"", "Add-Type -TypeDefinition $c",
+  ]) assert.equal(verifierShellDecision(c).action, "block", c);
+  for (const c of ["npm test", "npm run lint", "npx tsc --noEmit", "node --test test/", "git diff 4d53c01 --stat", "git log --oneline", "git ls-files",
+    "Get-Content a.txt", "Select-String -Path src/*.ts -Pattern foo", "ls -la", "cat package.json", "pytest -q", "cargo test", "node scripts/check.mjs"]) {
+    assert.equal(verifierShellDecision(c).action, "allow", c);
+  }
+});
+
+test("the extension's verifier role uses the verifier shell rule and blocks write/edit", () => {
+  const src = fs.readFileSync(fileURLToPath(new URL("../extensions/iced/index.ts", import.meta.url)), "utf8");
+  const block = src.slice(src.indexOf('if (role === "verifier")'), src.indexOf("if (role) return;"));
+  assert.match(block, /event\.toolName === "write" \|\| event\.toolName === "edit"\) return \{ block: true/);
+  assert.match(block, /verifierShellDecision\(input\?\.command\)/);
 });
 
 test("changedProtectedKeys", () => {

@@ -65,7 +65,8 @@ export function changedProtectedKeys(beforeText, afterText) {
 // Recording work (git add/commit/push/tag) leaves the working tree alone, so it is not "mutating".
 const REDIRECT = /(^|[^<>=&|])>>?(?!&)\s*[^\s&|]/; // redirection to a file (not 2>&1)
 const MUTATING_SHELL = [
-  /\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content)\b/i,
+  /\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Set-Item|Clear-Item|Set-ItemProperty|New-ItemProperty|Remove-ItemProperty|Expand-Archive|Compress-Archive|Export-Csv|Export-Clixml|Tee-Object)\b/i,
+  /\b(Invoke-WebRequest|Invoke-RestMethod|iwr|irm|curl|wget)\b[^;&|\n]*\s(-OutFile|-o|-O|--output)\b/i,
   /(^|[\s;&|(])(rm|mv|cp|del|erase|rd|rmdir|mkdir|touch|truncate|tee|chmod|chown|ln)\s/i,
   /\bsed\s+(-[a-z]*i|--in-place)/i,
   /\bperl\s+-[a-z]*i/i,
@@ -73,9 +74,11 @@ const MUTATING_SHELL = [
   /\bgit\s+push\b[^;&|\n]*\s(-f|--force(-with-lease)?|--delete|-d)\b/i,
   /\b(npm|pnpm|yarn|bun)\s+(i|install|add|remove|uninstall|update|upgrade|ci|link)\b/i,
   /\b(pip|pip3|uv|poetry|cargo|go|dotnet|gem|composer)\s+(install|add|remove|uninstall|get|update)\b/i,
-  /\bWriteAllText|WriteAllLines|AppendAllText\b/,
-  /\bnode\s+-e\b.*\b(writeFile|appendFile|rmSync|unlink|rename)/i,
-  /\bpython3?\s+-c\b.*\b(open\(.*['"]w|remove|rmtree|rename)/i,
+  /\b(Write|Append)All(Text|Lines|Bytes)\b|\[IO\.(File|Directory)\]::(Create|Delete|Move|Copy|Replace|Open)|\bStreamWriter\b/i,
+  // Inline scripts that touch the file system: node/bun/deno, python, ruby, perl.
+  /\b(node|bun|deno)\b[^;&|\n]*\s(-e|--eval|-p|--print)\b.*\b(writeFile|appendFile|createWriteStream|rmSync|rmdirSync|unlink|rename|copyFile|mkdir|truncate|cpSync|symlink|chmod)/i,
+  /\bpython3?\b[^;&|\n]*\s-c\b.*(open\([^)]*,\s*(mode\s*=\s*)?['"][^'"]*[wax+]|\b(remove|unlink|rmtree|rename|replace|makedirs|mkdir|write_text|write_bytes|copy|move)\b)/i,
+  /\b(ruby|perl)\b[^;&|\n]*\s-e\b.*\b(File\.(write|open|delete|rename)|unlink|rename|open\s*\(?\s*[\w$]+\s*,\s*['"][>+])/i,
 ];
 
 /** Shell text that names files only ICED may change. */

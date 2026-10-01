@@ -11,7 +11,7 @@ import { Box, Key, matchesKey, Text, truncateToWidth, wrapTextWithAnsi } from "@
 import { Type } from "typebox";
 import * as core from "@arturleao/iced-core";
 import * as picker from "../../src/picker.mjs";
-import { gateDecision, isMutatingShell, SHELL_TOOLS } from "../../src/gate.mjs";
+import { gateDecision, isMutatingShell, SHELL_TOOLS, verifierShellDecision } from "../../src/gate.mjs";
 import { piAgent } from "../../src/runner.mjs";
 
 /** Name used for reports and for legacy per-host entries in .iced/config.json. */
@@ -476,8 +476,9 @@ export default function iced(pi: ExtensionAPI) {
     pi.on("tool_call", async (event) => {
       const input: any = event.input;
       if (event.toolName === "write" || event.toolName === "edit") return { block: true, reason: "The ICED verifier is read-only." };
-      if (SHELL_TOOLS.includes(event.toolName) && isMutatingShell(input?.command)) {
-        return { block: true, reason: "The ICED verifier is read-only; run only commands that do not change files." };
+      if (SHELL_TOOLS.includes(event.toolName)) {
+        const d: any = verifierShellDecision(input?.command);
+        if (d.action === "block") return { block: true, reason: d.reason };
       }
       return undefined;
     });
