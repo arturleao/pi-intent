@@ -7,9 +7,12 @@ import { runProcess } from "@arturleao/iced-core/verify";
 
 export const SHELL_TOOL = process.platform === "win32" ? "powershell" : "bash";
 
-/** pi tools per access level. Read-only agents also get the shell, which the extension's verifier role guards. */
+/**
+ * pi tools per access level. Read-only agents get no shell: a shell cannot be restricted to reads, so verifiers
+ * read code and the check results ICED already ran. The extension's verifier role also blocks shell calls.
+ */
 export const TOOLS = {
-  "read-only": ["read", "grep", "find", "ls", SHELL_TOOL],
+  "read-only": ["read", "grep", "find", "ls"],
   write: ["read", "grep", "find", "ls", "write", "edit", SHELL_TOOL],
 };
 

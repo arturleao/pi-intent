@@ -394,8 +394,9 @@ file rules apply in every mode except `off`. `/iced use none` clears the active 
   accept. Also block commands that write into ICED-owned files. Documented as best effort; verification also reports
   files changed since `base_ref`.
 - Block reason tells the agent exactly what to do next (e.g. "Run /iced <intent> or call iced_request_signoff").
-- Children started with `ICED_ROLE=verifier` load the extension in read-only mode: `write`/`edit` and mutating
-  shell commands are blocked; other ICED features are off. Any other `ICED_ROLE` (the test writer) loads nothing.
+- Children started with `ICED_ROLE=verifier` load the extension in read-only mode: only `read`, `grep`, `find` and
+  `ls` may run (`verifierToolDecision`); `write`, `edit`, every shell and any other tool are blocked; other ICED
+  features are off. A shell cannot be limited to reads, so verifiers get none. Any other `ICED_ROLE` (the test writer) loads nothing.
 
 ### Prompt injection (`before_agent_start`)
 
@@ -419,7 +420,7 @@ request one continuation with a nudge. Max 2 nudges per build attempt (tracked i
 2. Collect changed files since `base_ref` (`git diff --name-only base_ref` + untracked) if git present.
 3. If `verify.independent`: pick lenses (`verify.lenses`: `auto` = `expectations`, `failures`, `rules` for tier
    M/L/XL or risk high, else one `full` verifier) and run one verifier per lens in parallel through the agent.
-   pi-intent's agent starts a fresh `pi -p --no-session --tools read,grep,find,ls,<shell>` (plus `--model` and
+   pi-intent's agent starts a fresh `pi -p --no-session --tools read,grep,find,ls` (no shell; plus `--model` and
    `--thinking` when set) with `ICED_ROLE=verifier`; the prompt goes to `.iced/tmp/<role>-*/prompt.md`
    (gitignored) and is attached with `@`. `verify.model` is a model or a list rotated across lenses; a `:level`
    suffix or `verify.effort` sets the thinking level. Unset: the session model and thinking level. Only the human

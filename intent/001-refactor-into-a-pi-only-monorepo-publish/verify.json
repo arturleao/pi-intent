@@ -1,9 +1,9 @@
 {
   "id": "001-refactor-into-a-pi-only-monorepo-publish",
   "title": "Pi-only ICED as two npm packages (agnostic core + pi extension)",
-  "attempt": 2,
-  "ts": "2026-10-01T12:32:34Z",
-  "summary": "Attempt 2. Fixed attempt-1 findings: intent/README.md rewritten to the new pi-neutral text (no other agents, no .iced/ICED.md); the human removed targets and verify.runner from this repo's .iced/config.json (its verify.model is a pi model list, keyed by \"pi\"); harness.test.mjs now also scans intent/README.md and asserts this repo's config has no targets, runner or non-pi model keys. E4 reworded by the human via escalation: verifiers read-only, test writer may write tests. Rest unchanged: iced-core (host-neutral, injected agent) + pi-intent (extension, gate, pi runner, picker); CLI, Action, skills and all other harnesses removed.",
+  "attempt": 3,
+  "ts": "2026-10-01T12:39:12Z",
+  "summary": "Attempt 3. Fixed the attempt-2 E4 finding (verifier shell could write via WriteAllBytes, Set-Item, node --eval). (1) core guard isMutatingShell now covers .NET File/Directory write APIs and StreamWriter, Set-Item/ItemProperty/archives/Export-*, downloads with -OutFile/-o, and inline node/bun/deno, python, ruby, perl file operations. (2) New verifierShellDecision in pi-intent src/gate.mjs, used by the extension's ICED_ROLE=verifier handler: besides the write heuristic it blocks ALL inline code (node -e/--eval/-p/--import, python -c, perl/ruby/php -e, pwsh/powershell -Command/-EncodedCommand/-File, bash/sh/cmd -c or /c, Invoke-Expression/iex, Start-Process, Add-Type, .NET static calls, New-Object IO/WebClient, eval), so obfuscated writes cannot get through; running tests, builds, linters, git reads and repo scripts stays allowed. Live check: pi with ICED_ROLE=verifier and --tools read,grep,find,ls,powershell blocked `node -e \"require('fs').writeFileSync(...)\"` (no file created) and ran npm --version. Earlier fixes kept: intent/README.md cleaned, repo config without targets/runner, E4 reworded by the human.",
   "evidence": [
     {
       "expectation": "E1",
@@ -23,7 +23,8 @@
     {
       "expectation": "E4",
       "kind": "test",
-      "ref": "packages/pi-intent/test/runner.test.mjs (verifier tools read,grep,find,ls,shell only; test writer adds write,edit; --model/--thinking from config/session; ICED_ROLE set)"
+      "ref": "packages/pi-intent/test/runner.test.mjs (verifier tools read,grep,find,ls,shell; test writer adds write,edit; --model/--thinking; ICED_ROLE) + packages/pi-intent/test/gate.test.mjs 'verifier shell: no file changes and no inline code...' (WriteAllBytes, Set-Item, node --eval/-e/-p/--import incl. obfuscated require, python -c, pwsh -Command/-EncodedCommand, bash -c, cmd /c, iex, Start-Process, .NET static calls blocked; npm test, node --test, git diff/log, pytest, node scripts/x.mjs allowed) and 'the extension's verifier role uses the verifier shell rule and blocks write/edit'",
+      "note": "Live: ICED_ROLE=verifier pi -p --tools 'read,grep,find,ls,powershell' got 'The ICED verifier is read-only' for node -e writeFileSync, probe.txt not created; npm --version ran. Shell rule remains a deny-list heuristic, documented as such."
     },
     {
       "expectation": "E5",
@@ -33,7 +34,7 @@
     {
       "expectation": "E6",
       "kind": "check",
-      "ref": "npm test: iced-core 67/67, pi-intent 31/31"
+      "ref": "npm test: iced-core 67/67, pi-intent 33/33"
     },
     {
       "expectation": "E7",
@@ -43,7 +44,7 @@
     {
       "expectation": "E8",
       "kind": "manual",
-      "ref": "Human ran /reload in pi installed from a local checkout; this session's new gate then allowed deleting .iced/bin and .iced/lib; fresh pi -p listed all 8 iced_* tools.",
+      "ref": "Human ran /reload in pi installed from a local checkout; this session's new gate then allowed deleting .iced/bin and .iced/lib; fresh pi -p listed all 8 iced_* tools; ICED_ROLE=verifier child loaded the new verifier rule from the installed path.",
       "note": "Human confirms /iced status in their session."
     },
     {
@@ -121,9 +122,9 @@
     {
       "command": "npm test",
       "exitCode": 0,
-      "durationMs": 10578,
+      "durationMs": 9828,
       "timedOut": false,
-      "tail": "...ups in parallel and stops a sequence at the first failure (2402.8555ms)\n✔ pickLenses: small units get one verifier, larger or risky units three (0.2311ms)\n✔ mergeVerifierReports: any failure wins, pass beats unknown (0.3722ms)\n✔ submitUnit: three verifiers run in parallel and a pass moves the unit to done (913.783ms)\n✔ submitUnit: a failing verifier sends the unit back to building, then blocks it (1612.9123ms)\n✔ submitUnit: missing evidence and wrong status (202.3032ms)\n✔ submitUnit without an agent: no independent verification, a human must review (435.6249ms)\n✔ submitUnit: an agent that throws or exits non-zero is reported, not fatal (564.2065ms)\n✔ collectRules qualifies inherited ids (2.3461ms)\n✔ verdict: pass with independent verifier (0.412ms)\n✔ verdict: failures of every kind (0.362ms)\n✔ verdict: inherited constraint violation fails the child (0.2713ms)\n✔ verdict: manual unknown needs a human; no verifier needs a human (0.2068ms)\n✔ parseVerifierOutput takes the last JSON verdict block (0.2109ms)\n✔ verifier prompt carries contract, claims, inherited rules and answer format (0.4174ms)\n✔ runCommands captures exit codes (212.4476ms)\n✔ verifyUnit writes evidence.md and verify.json (375.2163ms)\n✔ verifyUnit skips the verifier when evidence is missing (177.5741ms)\nℹ tests 67\nℹ suites 0\nℹ pass 67\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 6442.8638\n\n> @arturleao/pi-intent@0.1.0 test\n> node --test \"test/*.test.mjs\"\n\n✔ classifyPath (2.4775ms)\n✔ isMutatingShell (1.1767ms)\n✔ changedProtectedKeys (0.9512ms)\n✔ gate: no active unit leaves normal work alone but still protects ICED files (6.241ms)\n✔ gate always: no active unit blocks code and mutating shell, allows reads and commits (1.9414ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (9.5725ms)\n✔ gate: building allows code, freezes the contract (9.6201ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (30.2899ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (11.9908ms)\n✔ no file targets another harness or the removed CLI (99.9649ms)\n✔ removed paths stay removed (81.4801ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.3473ms)\n✔ no package exposes a CLI (0.3959ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (947.9913ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (890.815ms)\n✔ every module the extension imports is in the tarball or a declared dependency (874.8534ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.308ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.6205ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.8299ms)\n✔ models without thinking only toggle off and say so (0.7541ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.2099ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.2179ms)\n✔ typing filters models but keeps actions and rotations (0.2068ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2765ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1246ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.9931ms)\n✔ verifier tools never include write or edit; the test writer may write (0.1209ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (364.6705ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1071.7744ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (381.5563ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (458.0604ms)\nℹ tests 31\nℹ suites 0\nℹ pass 31\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2880.8592\n"
+      "tail": "...eats unknown (0.3461ms)\n✔ submitUnit: three verifiers run in parallel and a pass moves the unit to done (873.5277ms)\n✔ submitUnit: a failing verifier sends the unit back to building, then blocks it (1504.9628ms)\n✔ submitUnit: missing evidence and wrong status (174.0526ms)\n✔ submitUnit without an agent: no independent verification, a human must review (354.3732ms)\n✔ submitUnit: an agent that throws or exits non-zero is reported, not fatal (565.3214ms)\n✔ collectRules qualifies inherited ids (1.786ms)\n✔ verdict: pass with independent verifier (0.4008ms)\n✔ verdict: failures of every kind (0.3574ms)\n✔ verdict: inherited constraint violation fails the child (0.2643ms)\n✔ verdict: manual unknown needs a human; no verifier needs a human (0.2089ms)\n✔ parseVerifierOutput takes the last JSON verdict block (0.2005ms)\n✔ verifier prompt carries contract, claims, inherited rules and answer format (0.4026ms)\n✔ runCommands captures exit codes (200.0311ms)\n✔ verifyUnit writes evidence.md and verify.json (393.0144ms)\n✔ verifyUnit skips the verifier when evidence is missing (134.7283ms)\nℹ tests 67\nℹ suites 0\nℹ pass 67\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 6147.7849\n\n> @arturleao/pi-intent@0.1.0 test\n> node --test \"test/*.test.mjs\"\n\n✔ classifyPath (2.0429ms)\n✔ isMutatingShell (1.6845ms)\n✔ verifier shell: no file changes and no inline code; tests, builds, linters and git reads still run (0.8454ms)\n✔ the extension's verifier role uses the verifier shell rule and blocks write/edit (0.4776ms)\n✔ changedProtectedKeys (0.7497ms)\n✔ gate: no active unit leaves normal work alone but still protects ICED files (5.9832ms)\n✔ gate always: no active unit blocks code and mutating shell, allows reads and commits (1.4123ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (7.6075ms)\n✔ gate: building allows code, freezes the contract (7.3673ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (38.4008ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (10.3856ms)\n✔ no file targets another harness or the removed CLI (84.8265ms)\n✔ removed paths stay removed (79.3968ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.314ms)\n✔ no package exposes a CLI (0.3374ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (799.6193ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (744.7941ms)\n✔ every module the extension imports is in the tarball or a declared dependency (741.8879ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3253ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.4788ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.6428ms)\n✔ models without thinking only toggle off and say so (0.62ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1658ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.1798ms)\n✔ typing filters models but keeps actions and rotations (0.1677ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2232ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1011ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.757ms)\n✔ verifier tools never include write or edit; the test writer may write (0.0894ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (313.5018ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (984.489ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (303.07ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (344.9831ms)\nℹ tests 33\nℹ suites 0\nℹ pass 33\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2467.0623\n"
     }
   ],
   "host": "pi",
@@ -134,7 +135,7 @@
       "effort": "medium",
       "ok": true,
       "error": null,
-      "durationMs": 95762
+      "durationMs": 97948
     },
     {
       "name": "failures",
@@ -142,7 +143,7 @@
       "effort": "medium",
       "ok": true,
       "error": null,
-      "durationMs": 42714
+      "durationMs": 57490
     },
     {
       "name": "rules",
@@ -150,7 +151,7 @@
       "effort": "medium",
       "ok": true,
       "error": null,
-      "durationMs": 110536
+      "durationMs": 113622
     }
   ],
   "result": {
@@ -159,7 +160,8 @@
     "needsHuman": true,
     "commandsOk": true,
     "problems": [
-      "[E4] failed: Runner tests passed for subprocess arguments, models, effort and tool lists. However, verifier receives powershell/bash; extensions/iced/index.ts:475-483 allows shell whenever isMutatingShell returns false. Read-only classification probe returned false for WriteAllBytes, Set-Item and node --eval writeFileSync commands. Commands were tested as strings only, not executed. Verifier shell is not read-only. | packages/pi-intent/src/runner.mjs: read-only tools are read,grep,find,ls plus the shell tool; the write access level adds write and edit. runner.test.mjs passes. index.ts line 475 has a guard for ICED_ROLE=verifier. | `runner.test.mjs` passed. Read-only verifier tools exclude write/edit; test writer receives write/edit. `ICED_ROLE=verifier` blocks write/edit."
+      "[E4] failed: Runner tests pass model, effort and tool arguments. Read-only enforcement fails: directly evaluated verifierShellDecision('ni probe.txt') and verifierShellDecision('git -C . clean -fd'); both return allow. Get-Alias ni confirms New-Item. Extension index.ts:475-483 permits these decisions. Commands were evaluated as strings only; no destructive commands executed. | runner.test and gate.test pass (33/33). Verifier tools are read,grep,find,ls,shell with no write/edit; the shell gate blocked my own inline node -e. Reading the rules shows the deny-list leaves gaps (ni/sc/ac aliases, find -delete, tar x, dd of=, sort -o, npx/npm exec, repo scripts that write), so shell read-only is heuristic. | runner.mjs grants read-only verifiers powershell. gate.mjs uses deny-list only. PowerShell alias ri is Remove-Item (confirmed by Get-Alias ri) and command `ri <path>` matches neither mutating nor inline-code patterns, so verifier can delete files.",
+      "Failure condition [F4] triggered: Verifier tool list excludes literal write/edit tools. Shell still permits mutation, reported separately under E4. | The verifier gets no write/edit tools. Shell can still write through deny-list gaps (see E4 evidence); noted as a risk. | Verifier receives powershell, capable of writes. `ri` aliases Remove-Item and bypasses shell deny-list."
     ],
     "expectations": [
       {
@@ -175,7 +177,7 @@
           }
         ],
         "result": "pass",
-        "evidence": "npm test: agnostic source/import scans and injected-agent end-to-end verification tests passed. Core has no host dependencies. | Agnostic source scan test is in packages/iced-core/test/agnostic.test.mjs. I also grepped packages/iced-core/src and the package files and found no pi or agent references. verify-parallel and models tests use an injected fake agent, and npm test passes. | `npm test`: iced-core 67/67 passed. Reviewed core source: Node-only imports; agent execution injected."
+        "evidence": "npm test passed core source/import scans and injected-runner verification tests. | Grep of iced-core src/package.json/README finds no pi/claude/codex/cursor/gemini/copilot except 'pi-intent' in repo URLs. agnostic.test and verify tests pass in npm test (67/67). | Ran npm test: iced-core 67/67 passed, including agnostic source scan and injected verification tests."
       },
       {
         "id": "E2",
@@ -190,7 +192,7 @@
           }
         ],
         "result": "pass",
-        "evidence": "Harness scan passed; independently inspected git ls-files. Removed harness files, CLI, Action and split-flow code absent. Historical unit records retain removal-related mentions, not harness instructions. | git ls-files has no bin/, action.yml, AGENTS, CLAUDE, .claude, .codex, .cursor or skills/. git grep for claude|codex|cursor|copilot|gemini|iced.mjs|ICED.md|--prepare|--finish, excluding intent/ and tests, matched only the pi model ids in .iced/config.json (openai-codex/..., anthropic/claude-sonnet-5-5). Those are pi model names, not harness targets. harness.test.mjs passes. | Harness tests passed. `git ls-files` and filesystem check: no bin/, action.yml, skills/, agent files, vendored .iced/bin or .iced/lib. Pack lists clean."
+        "evidence": "Harness scans passed; independently inspected git ls-files. Removed CLI, harness directories, action and split-flow implementation absent. | git ls-files has no bin, action.yml, AGENTS/CLAUDE, .claude/.codex/.agents/.cursor, skills. git grep for harness names hits only TUI 'cursor' variables, a model name in config, unit files and scan tests. harness.test passes. | Ran harness tests. git ls-files has no removed bin/action/skills/lib/harness paths. Source/docs grep outside unit records and tests found only picker state.cursor matches."
       },
       {
         "id": "E3",
@@ -205,7 +207,7 @@
           }
         ],
         "result": "pass",
-        "evidence": "Ran init tests and inspected assertions: exact fresh-repo file inventory, forbidden paths absent, repeat initialization preserves config/memory/README and avoids duplicate lines. | init.test.mjs asserts only the allowed files and that the banned paths are absent. It passes. I did not run init myself, because the verifier is read-only. | `init.test.mjs` passed: exact owned files only, rerun safe, banned paths absent. Reviewed `packages/iced-core/src/init.mjs`."
+        "evidence": "Init tests passed exact fresh-repo file inventory, repeat initialization, preservation and forbidden-path checks. | packages/iced-core/test/init.test.mjs passes within npm test; I did not run init by hand. | npm test passed iced-core init empty-repo, idempotence, and legacy-file preservation tests."
       },
       {
         "id": "E4",
@@ -216,11 +218,12 @@
           {
             "expectation": "E4",
             "kind": "test",
-            "ref": "packages/pi-intent/test/runner.test.mjs (verifier tools read,grep,find,ls,shell only; test writer adds write,edit; --model/--thinking from config/session; ICED_ROLE set)"
+            "ref": "packages/pi-intent/test/runner.test.mjs (verifier tools read,grep,find,ls,shell; test writer adds write,edit; --model/--thinking; ICED_ROLE) + packages/pi-intent/test/gate.test.mjs 'verifier shell: no file changes and no inline code...' (WriteAllBytes, Set-Item, node --eval/-e/-p/--import incl. obfuscated require, python -c, pwsh -Command/-EncodedCommand, bash -c, cmd /c, iex, Start-Process, .NET static calls blocked; npm test, node --test, git diff/log, pytest, node scripts/x.mjs allowed) and 'the extension's verifier role uses the verifier shell rule and blocks write/edit'",
+            "note": "Live: ICED_ROLE=verifier pi -p --tools 'read,grep,find,ls,powershell' got 'The ICED verifier is read-only' for node -e writeFileSync, probe.txt not created; npm --version ran. Shell rule remains a deny-list heuristic, documented as such."
           }
         ],
         "result": "fail",
-        "evidence": "Runner tests passed for subprocess arguments, models, effort and tool lists. However, verifier receives powershell/bash; extensions/iced/index.ts:475-483 allows shell whenever isMutatingShell returns false. Read-only classification probe returned false for WriteAllBytes, Set-Item and node --eval writeFileSync commands. Commands were tested as strings only, not executed. Verifier shell is not read-only. | packages/pi-intent/src/runner.mjs: read-only tools are read,grep,find,ls plus the shell tool; the write access level adds write and edit. runner.test.mjs passes. index.ts line 475 has a guard for ICED_ROLE=verifier. | `runner.test.mjs` passed. Read-only verifier tools exclude write/edit; test writer receives write/edit. `ICED_ROLE=verifier` blocks write/edit."
+        "evidence": "Runner tests pass model, effort and tool arguments. Read-only enforcement fails: directly evaluated verifierShellDecision('ni probe.txt') and verifierShellDecision('git -C . clean -fd'); both return allow. Get-Alias ni confirms New-Item. Extension index.ts:475-483 permits these decisions. Commands were evaluated as strings only; no destructive commands executed. | runner.test and gate.test pass (33/33). Verifier tools are read,grep,find,ls,shell with no write/edit; the shell gate blocked my own inline node -e. Reading the rules shows the deny-list leaves gaps (ni/sc/ac aliases, find -delete, tar x, dd of=, sort -o, npx/npm exec, repo scripts that write), so shell read-only is heuristic. | runner.mjs grants read-only verifiers powershell. gate.mjs uses deny-list only. PowerShell alias ri is Remove-Item (confirmed by Get-Alias ri) and command `ri <path>` matches neither mutating nor inline-code patterns, so verifier can delete files."
       },
       {
         "id": "E5",
@@ -235,7 +238,7 @@
           }
         ],
         "result": "pass",
-        "evidence": "Ran compatibility, example-lint and legacy pi-map tests: golden contract hash matched, previously approved fixture accepted, examples validated, legacy model/effort settings applied. | compat.test.mjs (golden hash from 4d53c01), the core spec examples and the runner.test.mjs [E5] legacy-config test all pass in npm test. This repo's own config also loads. | Compat tests passed: golden pre-refactor contract hash unchanged; approved unit lints/accepts; legacy maps, runner, targets load with pi entry."
+        "evidence": "Compatibility tests passed golden contract hash, approved-unit lint/accept, spec examples and legacy pi model/effort maps. | compat.test, core.test and runner.test [E5] pass in npm test. Existing unit 001 hash unchanged. | npm test passed 67 iced-core tests, including golden pre-split hash, approved-unit lint/accept, legacy config, and spec examples."
       },
       {
         "id": "E6",
@@ -246,11 +249,11 @@
           {
             "expectation": "E6",
             "kind": "check",
-            "ref": "npm test: iced-core 67/67, pi-intent 31/31"
+            "ref": "npm test: iced-core 67/67, pi-intent 33/33"
           }
         ],
         "result": "pass",
-        "evidence": "Independently ran npm test: iced-core 67/67; pi-intent 31/31; exit 0. | npm test output given in the prompt: iced-core 67/67 and pi-intent 31/31 pass. I did not re-run the full suite. | `npm test` passed: iced-core 67/67, pi-intent 31/31."
+        "evidence": "Independently ran npm test: core 67/67, extension 33/33. | npm test: iced-core 67/67, pi-intent 33/33, 0 failures. | Ran npm test successfully: iced-core 67/67; pi-intent 33/33."
       },
       {
         "id": "E7",
@@ -265,7 +268,7 @@
           }
         ],
         "result": "pass",
-        "evidence": "Ran npm pack --dry-run for both workspaces: core 22 files, extension 9 files. Runtime sources/templates/rubric included; tests, intent and .iced excluded. Inspected manifests; metadata, core dependency, public access and wildcard peers present. Package import-coverage tests passed. | I ran npm pack --dry-run for both packages. iced-core ships 22 files: src, spec, README, LICENSE and package.json. pi-intent ships 9 files: extensions, src, docs, README, LICENSE and package.json. Neither ships tests, intent/ or .iced/. The package.json files have name, version, license, repository, files, exports and publishConfig. pi-intent depends on @arturleao/iced-core and lists the pi packages, typebox included, as peerDependencies \"*\". The root package is private. | `npm pack --dry-run --json -w packages/iced-core -w packages/pi-intent` succeeded. Tarballs contain runtime sources/spec/docs, exclude tests and repo data. Metadata and peer deps reviewed."
+        "evidence": "Independently ran npm pack --dry-run for both workspaces: core 22 files, extension 9 files. Runtime assets present; excluded tests and repo state. Manifest inspection and package tests confirm metadata, dependencies and peers. | npm pack --dry-run: iced-core 22 files, pi-intent 9 files, no tests/intent/.iced. package.json metadata complete; pi-intent depends on @arturleao/iced-core and lists pi, pi-tui and typebox as peers '*'; publishConfig public; package.test passes. | Ran npm pack --dry-run --json for both workspaces. Core contains src/spec/templates/rubric; pi package contains extension/src/docs; neither contains tests, intent, or .iced. Metadata and peer/dependency declarations inspected."
       },
       {
         "id": "E8",
@@ -276,12 +279,12 @@
           {
             "expectation": "E8",
             "kind": "manual",
-            "ref": "Human ran /reload in pi installed from a local checkout; this session's new gate then allowed deleting .iced/bin and .iced/lib; fresh pi -p listed all 8 iced_* tools.",
+            "ref": "Human ran /reload in pi installed from a local checkout; this session's new gate then allowed deleting .iced/bin and .iced/lib; fresh pi -p listed all 8 iced_* tools; ICED_ROLE=verifier child loaded the new verifier rule from the installed path.",
             "note": "Human confirms /iced status in their session."
           }
         ],
         "result": "unknown",
-        "evidence": "Cannot independently demonstrate interactive /reload and /iced status in user's installed session. Root manifest test passed, but does not prove interactive loading. Human must perform requested check. | Manual expectation. node_modules/@arturleao has junctions to the workspace packages, so the extension's import of @arturleao/iced-core resolves. The root pi manifest points at packages/pi-intent/extensions/iced/index.ts. The human should run /reload and /iced status. | Cannot independently run interactive pi `/reload` and `/iced status`. Builder/human claim is not concrete verifier evidence."
+        "evidence": "Root manifest test passes local extension path. Did not independently exercise interactive /reload, /iced status or iced_* tools. | Manual: needs a human /reload and /iced status in pi. Root package.json pi manifest points to packages/pi-intent/extensions/iced/index.ts, which exists. | Requires independent human /reload and /iced status in installed pi session. Not performed here."
       },
       {
         "id": "E9",
@@ -296,7 +299,7 @@
           }
         ],
         "result": "pass",
-        "evidence": "Executed harness scan covering READMEs and docs; passed. Additional case-insensitive docs search for claude|codex|cursor|copilot|gemini|iced.mjs found no matches. | git grep of READMEs and docs for the harness names and iced.mjs found no hits. Only intent/<id>/iced.md paths matched, which are unit files. | Harness documentation scan passed. Reviewed root and package READMEs: pi install documented; no removed-harness or standalone ICED CLI instructions."
+        "evidence": "Independent git grep found no forbidden harness/CLI terms in READMEs and extension docs. Root and extension READMEs contain required npm installation command. | git grep for claude|codex|cursor|copilot|gemini|iced.mjs finds no README or docs hits; harness.test scans the READMEs and docs. | Inspected root and package READMEs; pi install command documented. Targeted grep outside historical unit records/tests found no removed-harness or iced.mjs instructions."
       }
     ],
     "failures": [
@@ -306,7 +309,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "triggered": false,
         "checked": true,
-        "evidence": "Compatibility golden-hash, approved-unit lint/accept and spec-example tests passed. | The compat golden hash test passes, and the spec examples lint clean. | Current unit computed contract hash equals stored hash; lint has no errors. Legacy approved-unit compat test passed."
+        "evidence": "Golden-hash, approved-unit lint and spec-example tests passed. | compat golden-hash and spec example tests pass. | Compatibility tests passed golden hash and approved-unit lint/accept."
       },
       {
         "id": "F2",
@@ -314,7 +317,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "triggered": false,
         "checked": true,
-        "evidence": "Not demonstrated; interactive installed-session behavior remains unknown. | The root pi manifest path exists. The workspace links resolve. The extension imports are consistent. The runtime load is covered by E8 (manual). | Not independently manually tested; no code evidence of broken extension loading found."
+        "evidence": "Not demonstrated; interactive reload remains unverified. | Root pi manifest and extension path are valid; not live-tested by me. | Unknown independently; manual reload check not performed."
       },
       {
         "id": "F3",
@@ -322,15 +325,15 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "triggered": false,
         "checked": true,
-        "evidence": "Independent pack dry-run and runtime import-coverage tests passed; required assets included, forbidden repository/test paths excluded. | Both packed file lists contain templates, rubric, extension sources, src and docs, and no tests, intent/ or .iced/. | Dry-run pack lists include extension, source, templates and rubric; tests, intent and .iced absent."
+        "evidence": "Both dry-run inventories and packed-import checks passed. | Pack lists templates, rubric and the extension .ts; no tests, intent or .iced. | Dry-run pack lists required runtime files and excludes tests, intent, and .iced."
       },
       {
         "id": "F4",
         "text": "A verifier agent gets write or edit tools.",
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
-        "triggered": false,
+        "triggered": true,
         "checked": true,
-        "evidence": "Verifier tool list excludes named write/edit tools and extension blocks them. Shell still permits writes, reported separately under E4. | The verifier tool list in runner.mjs has no write or edit. index.ts also guards the shell for ICED_ROLE=verifier. | Verifier tool list is read, grep, find, ls, shell; no write/edit. Extension blocks write/edit for verifier role."
+        "evidence": "Verifier tool list excludes literal write/edit tools. Shell still permits mutation, reported separately under E4. | The verifier gets no write/edit tools. Shell can still write through deny-list gaps (see E4 evidence); noted as a risk. | Verifier receives powershell, capable of writes. `ri` aliases Remove-Item and bypasses shell deny-list."
       },
       {
         "id": "F5",
@@ -338,7 +341,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "triggered": false,
         "checked": true,
-        "evidence": "Fresh-init exact-inventory and forbidden-path assertions passed. | init.test.mjs asserts the banned paths are absent after init. | Fresh-init test passed and checks all prohibited files/directories absent."
+        "evidence": "Fresh-init inventory and forbidden-directory tests passed. | init.test passes and checks the created files. | Empty-repo init test passed and checks all prohibited legacy paths absent."
       }
     ],
     "constraints": [
@@ -348,7 +351,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "violated": false,
         "checked": true,
-        "evidence": "Core agnostic scans and injected-runner tests passed; no host dependency. | The agnostic scan test passes and the core src is clean. | Core source imports Node built-ins only; verifier/test-writer runner injected. Agnostic scan passed."
+        "evidence": "Core host-reference/import scans and injected-agent tests passed. | Core source has no agent imports or mentions; only the repo URL contains 'pi-intent'. | Core agnostic scan and dependency/import test passed."
       },
       {
         "id": "C2",
@@ -356,7 +359,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "violated": false,
         "checked": true,
-        "evidence": "Harness scan and tracked-file inspection found no retained other-host integration. | No harness files, runners or docs for other agents exist in tracked files. | No active removed-host runner, instruction, skill, agent file, or context block found. Historical unit records only describe removal."
+        "evidence": "Harness scan and tracked-file inspection found no remaining harness integrations; historical unit records describe removal. | No other-harness files tracked; grep clean. | Harness scan passed; tracked product files contain no other-harness targeting."
       },
       {
         "id": "C3",
@@ -364,7 +367,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "violated": false,
         "checked": true,
-        "evidence": "Removed-path and no-bin tests passed; git ls-files contains no standalone CLI or Action. | No bin/, action.yml, .iced/bin or .iced/lib in the tracked files. The working tree .iced has only config, memory, templates, metrics and tmp. | CLI, vendored copies and GitHub Action absent; init source does not create them."
+        "evidence": "Removed-path and no-bin tests passed; tracked inventory contains no standalone CLI or action. | No bin/, action.yml or vendored .iced/bin or .iced/lib tracked. | Removed-path, no-CLI, and init tests passed."
       },
       {
         "id": "C4",
@@ -372,7 +375,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "violated": false,
         "checked": true,
-        "evidence": "Compatibility tests passed for hashes, approved units, old config keys and pi model/effort maps. | The compat tests and the legacy-config test pass. | Compatibility and hash tests passed; legacy config loading tested."
+        "evidence": "Hash, status, lint and legacy-config compatibility tests passed. | compat tests pass, including legacy config loading. | Compatibility tests passed existing hash, lint, status flow, and legacy config loading."
       },
       {
         "id": "C5",
@@ -380,7 +383,7 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "violated": false,
         "checked": true,
-        "evidence": "Both manifests declare ESM and Node >=20. Host packages appear only as wildcard peerDependencies. | The pi host packages and typebox are peerDependencies \"*\". Node >=20 and ESM are set. | Package manifests: Node >=20, ESM; pi host packages are peerDependencies `*`, not dependencies."
+        "evidence": "Both manifests declare ESM and Node >=20. Extension host packages are peers '*', not dependencies. | Peers are '*', Node >=20 and ESM are declared, and iced-core is the only dependency. | Package manifests inspected: Node >=20, ESM; pi host packages peers '*' only."
       },
       {
         "id": "C6",
@@ -388,11 +391,11 @@
         "from": "001-refactor-into-a-pi-only-monorepo-publish",
         "violated": false,
         "checked": true,
-        "evidence": "Verification used tests and pack dry-run, not publish or settings changes. Builder's historical external actions not independently established. | Nothing was published. I found no sign of pi settings changes. | Only dry-run pack executed. No publish script or settings-file change found in repository."
+        "evidence": "Executed tests and dry-run packing only; no publication or settings changes performed. Earlier external actions unknown. | No publish evidence; the git working tree is clean except the unit's iced.md. | No publish command run; changed tracked files do not include pi user settings."
       }
     ],
     "outOfScope": [],
-    "notes": "[expectations] Blocking finding: E4/D3 read-only guarantee relies on explicitly heuristic shell detection in packages/iced-core/src/guard.mjs. Safe string-only probes proved mutating commands bypass it. Smallest reliable fix: remove unrestricted verifier shell or replace it with constrained read/check execution. Add regression coverage. E8 still needs human verification.\n[failures] I did not re-run the full npm test; I relied on the supplied output plus targeted checks. The repo's .iced/config.json lists model ids containing 'claude' and 'codex'. They are pi provider/model names, so I judged them acceptable. A strict grep-based reading of E2 might flag them. The harness.test.mjs file asserts that config only has the 'pi' key. E8 needs the human to run /reload and /iced status.\n[rules] Smallest fix: human independently run `/reload`, then `/iced status` in pi loaded from a local checkout; record concrete result. E8 unknown makes D1 unmet."
+    "notes": "[expectations] D1 fails through E4. Minimal regression fixes: handle PowerShell mutation aliases and git global options before subcommands, adding tests for both demonstrated bypasses. Deny-list shell filtering cannot guarantee read-only execution; enforce a constrained execution boundary if that guarantee is required. Human must independently confirm E8. Existing tests pass but miss demonstrated cases.\n[failures] Verifier shell read-only is a heuristic deny-list. PowerShell aliases (ni, sc, ac, ri), find -delete, tar x, dd of=, sort -o, npx and npm exec are not covered. Repo scripts can write by design. Human should check E8 with /reload and /iced status.\n[rules] Blocking security finding. Remove verifier shell or replace heuristic with enforceable sandbox/allowlist. E8 still needs human manual check."
   },
   "verdict": "fail"
 }

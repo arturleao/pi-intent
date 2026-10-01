@@ -97,7 +97,8 @@ every code change in the repo must go through ICED.
 - Agents cannot approve or accept, or change the models that verify their work.
 - A build that stops without submitting gets up to two nudges to finish or escalate.
 - "Done" is decided by `verify.commands` (run in parallel) plus independent verifiers: separate pi processes
-  with fresh context and read-only tools that try to prove the work fails, including parent constraints.
+  with fresh context and only read tools (read, grep, find, ls; no shell, no write or edit) that try to prove the
+  work fails, using the code and the check results, including parent constraints.
   M/L/XL or high-risk units get three verifiers in parallel (expectations, breaking it, rules and scope); any
   failure from any of them fails the unit. Three failed attempts block the unit.
 

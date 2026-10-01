@@ -15,28 +15,13 @@ export function predictContent(toolName, input, abs) {
 
 export const SHELL_TOOLS = ["bash", "powershell"];
 
-// Inline code can do anything, so verifiers may not run it at all (they still run tests, builds, linters, git).
-const INLINE_CODE = [
-  /\b(node|bun|deno|tsx|ts-node)\b[^;&|\n]*\s(-e|--eval|-p|--print|-r|--require|--import)\b/i,
-  /\b(python3?|py)\b[^;&|\n]*\s-c\b/i,
-  /\b(ruby|perl|php)\b[^;&|\n]*\s-[a-z]*[er]\b/i,
-  /\b(pwsh|powershell)(\.exe)?\b[^;&|\n]*\s-(c|command|e|ec|encodedcommand|f|file)\b/i,
-  /\b(bash|sh|zsh|cmd)(\.exe)?\b[^;&|\n]*\s(-c|\/c|\/k)\b/i,
-  /\b(Invoke-Expression|iex|Invoke-Command|Start-Process|Start-Job|Add-Type)\b/i,
-  /\[(System\.)?(IO|Net|Diagnostics|Reflection|Convert|Activator|Environment|Runtime)\b[\w.]*\]::/i,
-  /\bNew-Object\b[^;&|\n]*\b(IO\.|Net\.WebClient|StreamWriter)/i,
-  /\beval\b|\bxargs\b[^;&|\n]*\b(rm|mv|cp|tee)\b/i,
-];
+/** Tools a read-only verifier agent may use. Everything else (write, edit, any shell, extension tools) is blocked. */
+export const VERIFIER_TOOLS = ["read", "grep", "find", "ls"];
 
-/**
- * Shell rule for read-only verifier agents: block anything that looks like it changes files, and any inline code.
- * @returns {{action: "allow"} | {action: "block", reason: string}}
- */
-export function verifierShellDecision(command) {
-  const c = String(command ?? "");
-  if (isMutatingShell(c)) return { action: "block", reason: "The ICED verifier is read-only; run only commands that do not change files." };
-  if (INLINE_CODE.some((re) => re.test(c))) return { action: "block", reason: "The ICED verifier may not run inline code; run the project's tests, builds and linters, or read files with the read tools." };
-  return { action: "allow" };
+/** Tool rule for verifier agents (ICED_ROLE=verifier): read tools only. */
+export function verifierToolDecision(toolName) {
+  if (VERIFIER_TOOLS.includes(toolName)) return { action: "allow" };
+  return { action: "block", reason: `The ICED verifier is read-only and may use only ${VERIFIER_TOOLS.join(", ")}; read the code and the check results in the prompt.` };
 }
 
 /**

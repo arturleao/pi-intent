@@ -118,7 +118,7 @@ export function readRubric() {
 // ---------------------------------------------------------------------------
 
 export const LENSES = {
-  expectations: "The expectations. For each [E#], run the referenced test or check yourself and try to demonstrate it for real, including edge cases the builder may have skipped.",
+  expectations: "The expectations. For each [E#], check the referenced test or check against the code and the check results, and try to demonstrate it for real, including edge cases the builder may have skipped.",
   failures: "Breaking it. Actively try to trigger every failure condition (own and inherited) with inputs, states and paths the builder is unlikely to have tested.",
   rules: "Rules and scope. Check every constraint (own and inherited) against the changed files, look for security and data-handling problems, and list anything changed outside Scope.",
 };
@@ -163,7 +163,8 @@ export function buildVerifierPrompt({ unit, ancestorUnits = [], summary, evidenc
   const lines = [
     "You are the independent ICED verifier. Another agent built the change below and claims it is done.",
     "Your job is to try to prove that it is NOT done. Treat every claim as unverified until you have checked it yourself",
-    "by reading code and running read-only commands (tests, linters, builds). Do not modify, create or delete files.",
+    "by reading the code, the tests and the check results below (run read-only commands only if your tools allow it).",
+    "Do not modify, create or delete files.",
     "Do not trust the builder's summary. An expectation passes only when you have concrete evidence.",
     "",
   ];
@@ -202,7 +203,7 @@ export function buildVerifierPrompt({ unit, ancestorUnits = [], summary, evidenc
   if (rubric) lines.push("## Rubric", "", rubric.trim(), "");
   lines.push(
     "## What to check",
-    "1. Each expectation: is it actually met? Run the referenced test or check when possible. Expectations of kind",
+    "1. Each expectation: is it actually met? Read the referenced test or check and its result below. Expectations of kind",
     "   `manual` may be `unknown` if they truly need a human; say what the human should check.",
     "2. Each failure condition (own and inherited): is it triggered? Look for it actively.",
     "3. Each constraint (own and inherited): is it violated? Also flag changes outside the unit's Scope.",

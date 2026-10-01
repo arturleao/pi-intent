@@ -74,9 +74,10 @@ test("piArgs: print mode, no session, tools for the access level, model and thin
   assert.deepEqual(piArgs({ promptFile: "p", access: "bogus" }).slice(2, 4), ["--tools", TOOLS["read-only"].join(",")], "unknown access falls back to read-only");
 });
 
-test("verifier tools never include write or edit; the test writer may write", () => {
-  assert.deepEqual(TOOLS["read-only"], ["read", "grep", "find", "ls", SHELL_TOOL]);
-  assert.ok(!TOOLS["read-only"].includes("write") && !TOOLS["read-only"].includes("edit"));
+test("verifier tools never include write, edit or a shell; the test writer may write", () => {
+  assert.deepEqual(TOOLS["read-only"], ["read", "grep", "find", "ls"]);
+  for (const t of ["write", "edit", "bash", "powershell"]) assert.ok(!TOOLS["read-only"].includes(t), t);
+  assert.ok(TOOLS.write.includes(SHELL_TOOL), "the test writer can run tests");
   assert.ok(TOOLS.write.includes("write") && TOOLS.write.includes("edit"));
 });
 

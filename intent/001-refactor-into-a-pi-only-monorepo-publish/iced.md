@@ -8,7 +8,7 @@ parent: null
 status: building
 autonomy: 1
 risk: medium
-attempts: 2
+attempts: 0
 created: 2026-10-01T11:59:25Z
 approved_at: 2026-10-01T12:28:44Z
 approved_by: Artur Leao

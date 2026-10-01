@@ -4,7 +4,8 @@ import path from "node:path";
 import * as core from "@arturleao/iced-core";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { changedProtectedKeys, classifyPath, gateDecision, isMutatingShell, verifierShellDecision } from "../src/gate.mjs";
+import { VERIFIER_TOOLS, changedProtectedKeys, classifyPath, gateDecision, isMutatingShell, verifierToolDecision } from "../src/gate.mjs";
+import { TOOLS } from "../src/runner.mjs";
 import { cleanup, tempRepo, unitText, writeUnit } from "../../iced-core/test/helpers.mjs";
 
 test("classifyPath", (t) => {
@@ -42,26 +43,17 @@ test("isMutatingShell", () => {
   }
 });
 
-test("verifier shell: no file changes and no inline code; tests, builds, linters and git reads still run", () => {
-  for (const c of [
-    "rm -rf src", "echo x > a", "[IO.File]::WriteAllBytes('a', $b)", "Set-Item a -Value x",
-    "node --eval \"require('fs').writeFileSync('a','x')\"", "node -e \"globalThis['req'+'uire']('f'+'s').writeFileSync('a','x')\"",
-    "node -p 1", "node --import ./x.mjs", "python -c \"__import__('os').system('x')\"", "perl -e 'print 1'", "ruby -e 'p 1'",
-    "pwsh -Command Remove-Item a", "powershell -EncodedCommand AAAA", "bash -c 'rm a'", "cmd /c del a", "iex $s",
-    "Invoke-Expression $s", "Start-Process notepad", "[System.Net.WebClient]::new()", "[Convert]::FromBase64String('x')",
-    "New-Object System.IO.StreamWriter a", "eval \"$x\"", "Add-Type -TypeDefinition $c",
-  ]) assert.equal(verifierShellDecision(c).action, "block", c);
-  for (const c of ["npm test", "npm run lint", "npx tsc --noEmit", "node --test test/", "git diff 4d53c01 --stat", "git log --oneline", "git ls-files",
-    "Get-Content a.txt", "Select-String -Path src/*.ts -Pattern foo", "ls -la", "cat package.json", "pytest -q", "cargo test", "node scripts/check.mjs"]) {
-    assert.equal(verifierShellDecision(c).action, "allow", c);
-  }
+test("verifier tools: read, grep, find and ls only; write, edit and every shell are blocked", () => {
+  for (const t of ["read", "grep", "find", "ls"]) assert.equal(verifierToolDecision(t).action, "allow", t);
+  for (const t of ["write", "edit", "bash", "powershell", "pwsh", "iced_submit", "mcp", "anything"]) assert.equal(verifierToolDecision(t).action, "block", t);
+  assert.deepEqual(TOOLS["read-only"], VERIFIER_TOOLS, "the runner grants exactly what the verifier role allows");
 });
 
-test("the extension's verifier role uses the verifier shell rule and blocks write/edit", () => {
+test("the extension's verifier role uses the verifier tool rule for every tool call", () => {
   const src = fs.readFileSync(fileURLToPath(new URL("../extensions/iced/index.ts", import.meta.url)), "utf8");
   const block = src.slice(src.indexOf('if (role === "verifier")'), src.indexOf("if (role) return;"));
-  assert.match(block, /event\.toolName === "write" \|\| event\.toolName === "edit"\) return \{ block: true/);
-  assert.match(block, /verifierShellDecision\(input\?\.command\)/);
+  assert.match(block, /pi\.on\("tool_call", async \(event\) => \{\s*const d: any = verifierToolDecision\(event\.toolName\);\s*return d\.action === "block" \? \{ block: true, reason: d\.reason \} : undefined;/);
+  assert.match(block, /\breturn;\s*\}\s*$/);
 });
 
 test("changedProtectedKeys", () => {

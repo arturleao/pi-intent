@@ -20,3 +20,8 @@ Agent-owned, append-only log of significant choices. Audited, not approved.
 ## 2026-10-01T12:28:45Z (human)
 - Decision: Contract changed by the human after change-expectation escalation (applied the agent's proposal).
 - Why: E4 says verifiers AND the test writer run "with read-only tools". The verifier read it literally and failed E4. The test writer exists to write tests before the build (build.testWriter), so it needs write/edit; this matches the behavior before the refactor (it had write, edit). Verifiers stay strictly read-only (read, grep, find, ls, shell + the ICED_ROLE=verifier guard blocking write/edit and mutating shell). Proposal: reword E4 so only verifiers are read-only and the test writer may write tests.
+
+## 2026-10-01T13:05:53Z (agent)
+- Decision: Verifiers get no shell: pi tools read, grep, find, ls only, and the ICED_ROLE=verifier handler blocks every shell tool call as a second layer. The core verifier prompt says to rely on the check results ICED already ran (and to run commands only if its tools allow it). The test writer keeps write, edit and the shell.
+- Why: A shell can't be made read-only with patterns: three verification rounds found new bypasses each time (aliases, git -C, find -delete, npm exec, repo scripts). Even an allowlist of test commands runs arbitrary repo code. verify.commands already run by the tooling and appear in the prompt, so verifiers keep the check evidence. This makes E4/F4 true by construction.
+- Alternatives: Allowlist of read-only and test commands (npm test etc. still execute arbitrary code); Keep the deny-list and reword E4/F4 to 'best effort' (weakens the contract); OS sandbox (separate unit)
