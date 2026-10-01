@@ -90,7 +90,7 @@ Never `npm publish` by hand. No npm token is stored anywhere; each package has a
 
 ## CI
 
-`.github/workflows/ci.yml` runs on pushes to `main` and pull requests: `npm ci && npm test` on Linux and Windows, Node 20 and 22, plus a gitleaks scan of the full history. Keep it green.
+`.github/workflows/ci.yml` runs on pushes to `main` and pull requests: `npm ci && npm test` on Linux and Windows, Node 22 and 24, plus a gitleaks scan of the full history. Keep it green.
 
 ## Repository hygiene: no local or private information
 
