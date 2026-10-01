@@ -25,7 +25,7 @@ Run `npm test` before every commit.
 
 ## Commits: Conventional Commits 1.0.0
 
-Every commit on `main` (including merge and squash commits) uses this format:
+Every commit on `dev` and `main` (including merge and squash commits, and PR titles) uses this format:
 
 ```
 <type>[optional scope][!]: <description>
@@ -78,19 +78,25 @@ Pre-1.0.0 (current `0.x`): breaking changes bump MINOR (`0.1.0` to `0.2.0`); fix
 
 Never edit `version` by hand in a feature commit; bumps go in their own release commit.
 
-## Releasing
+## Branches and releasing
 
-1. Derive the next version from commit types since the last tag: `git log $(git describe --tags --abbrev=0)..HEAD --oneline`.
-2. `npm run release -- <major|minor|patch|X.Y.Z>` on a clean `main`. It bumps both packages, updates the iced-core range in pi-intent and `package-lock.json`, runs `npm test`, commits `chore(release): vX.Y.Z` and creates the annotated tag `vX.Y.Z`.
-3. `git push --follow-tags`.
+- `dev` is the default branch: all work lands there (directly or through PRs into `dev`).
+- `main` is the release branch: merging `dev` into `main` releases. Do not commit to `main` directly.
+- Merge `dev` into `main` with a merge commit (not squash) so every commit type counts for the version bump.
 
-The `v*` tag triggers `.github/workflows/publish.yml`: `npm test`, checks the tag equals both package versions, publishes `iced-core` then `pi-intent` through npm trusted publishing (OIDC, no token, with provenance), skipping any version already on npm, and creates a GitHub release with generated notes.
+Every push to `main` runs `.github/workflows/publish.yml`:
+
+1. `npm test`.
+2. `node scripts/release.mjs auto`: derives the bump from the commits since the last tag using the type table and versioning rules above. Only `feat`, `fix`, `perf`, `revert` and breaking commits release; a merge with only `docs`, `ci`, `chore` and the like publishes nothing.
+3. When something is releasable: commits `chore(release): vX.Y.Z` (both package versions, the iced-core range in pi-intent, `package-lock.json`), tags `vX.Y.Z`, pushes both to `main`, publishes `iced-core` then `pi-intent` through npm trusted publishing (OIDC, no token, with provenance), skipping any version already on npm, creates a GitHub release with generated notes, and syncs `dev` with `main` (fast-forward, else a merge; a conflict is reported as a workflow warning to fix by hand).
+
+Re-running the workflow is safe: it publishes whatever version `main` carries that npm lacks. Preview the next version locally on a clean tree with `node scripts/release.mjs auto --dry-run`. `npm run release -- <major|minor|patch|X.Y.Z>` on `main` remains for an explicit version; push it with `git push --follow-tags`.
 
 Never `npm publish` by hand. No npm token is stored anywhere; each package has a trusted publisher on npmjs.com pointing at this repo and `publish.yml`.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on pushes to `main` and pull requests: `npm ci && npm test` on Linux and Windows, Node 22 and 24, plus a gitleaks scan of the full history. Keep it green.
+`.github/workflows/ci.yml` runs on pushes to `dev` and `main` and on pull requests: `npm ci && npm test` on Linux and Windows, Node 22 and 24, plus a gitleaks scan of the full history. Keep it green.
 
 ## Repository hygiene: no local or private information
 

@@ -25,9 +25,9 @@ The root `package.json` is a private workspace root whose `pi` manifest points a
 `packages/pi-intent/extensions/iced/index.ts`, so pi can load the extension straight from a checkout:
 `pi install <path to this repo>`, then `/reload` after changes.
 
-Releasing: both packages share one version. `npm run release -- <major|minor|patch>` then
-`git push --follow-tags`; the `v*` tag publishes to npm (trusted publishing, provenance) and creates the
-GitHub release. Commit conventions, versioning and repo hygiene rules: [CONTRIBUTING.md](CONTRIBUTING.md).
+Releasing: work lands on `dev`; merging `dev` into `main` releases. The publish workflow derives the version
+from Conventional Commits, tags it, publishes both packages (one shared version) to npm with trusted publishing
+and provenance, and creates the GitHub release. Commit conventions, versioning and repo hygiene rules: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
