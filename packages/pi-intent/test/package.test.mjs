@@ -11,7 +11,9 @@ const HOST_PACKAGES = ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tu
 
 function packed(dir) {
   const out = execSync("npm pack --dry-run --json --ignore-scripts", { cwd: path.join(REPO, dir), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
-  const [info] = JSON.parse(out);
+  // npm <= 11 prints an array; npm 12 prints an object keyed by package name.
+  const json = JSON.parse(out);
+  const [info] = Array.isArray(json) ? json : Object.values(json);
   return { name: info.name, version: info.version, files: info.files.map((f) => f.path.replace(/\\/g, "/")).sort() };
 }
 const manifest = (dir) => JSON.parse(fs.readFileSync(path.join(REPO, dir, "package.json"), "utf8"));
