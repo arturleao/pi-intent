@@ -46,6 +46,28 @@ test("verdict: failures of every kind", () => {
   assert.equal(computeVerdict({ ...base, verifier: { ...passing, verdict: "fail", notes: "broken" } }).verdict, "fail");
 });
 
+test("verdict: ICED's own files flagged out of scope do not fail the unit", () => {
+  const base = { unit: unitOf(), evidence, commandResults: [], verifier: passing };
+  const own = [".iced/metrics.jsonl", "`.iced/metrics.jsonl` (ICED bookkeeping, harmless)", "intent\\001-dark-mode\\evidence.md", "./intent/001-dark-mode/verify.json"];
+  const v = computeVerdict({ ...base, verifier: { ...passing, outOfScope: own } });
+  assert.equal(v.verdict, "pass");
+  assert.deepEqual(v.outOfScope, []);
+  assert.deepEqual(v.ignoredOutOfScope, own);
+  // verifiers often set verdict "fail" only because of the bookkeeping file
+  assert.equal(computeVerdict({ ...base, verifier: { ...passing, verdict: "fail", outOfScope: [".iced/metrics.jsonl"] } }).verdict, "pass");
+  // real files still count, also when mixed with ICED paths in one entry
+  for (const x of ["src/app.ts", ".iced/metrics.jsonl and src/app.ts", "edited the marketing site", "metrics.jsonl"]) {
+    assert.equal(computeVerdict({ ...base, verifier: { ...passing, outOfScope: [x] } }).verdict, "fail", x);
+  }
+  assert.equal(computeVerdict({ ...base, verifier: { ...passing, outOfScope: [".iced-other/x"] } }).verdict, "fail");
+});
+
+test("verifier prompt says ICED's own files are never out of scope", () => {
+  const p = buildVerifierPrompt({ unit: unitOf(), summary: "s", evidence, commandResults: [], files: [], rubric: "" });
+  assert.match(p, /`\.iced\/metrics\.jsonl`/);
+  assert.match(p, /never out of scope/);
+});
+
 test("verdict: inherited constraint violation fails the child", () => {
   const verifier = { ...passing, constraints: [...passing.constraints, { id: "000-program:C1", violated: true, evidence: "no audit" }] };
   const v = computeVerdict({ unit: unitOf(), ancestorUnits: [parent()], evidence, verifier });

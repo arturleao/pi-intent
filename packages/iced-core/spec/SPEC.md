@@ -272,6 +272,9 @@ The builder submits evidence for every expectation. Verification then:
 The verdict is **pass** only when every check command passed, every expectation has evidence, and, with
 a verifier, every expectation passed (a `manual` expectation MAY be `unknown`, which then requires human
 acceptance), no failure condition is triggered, no constraint is violated and nothing is out of scope.
+ICED's own records under `intent/` and `.iced/` (unit files, evidence, `verify.json`, `.iced/metrics.jsonl`,
+config, tmp) are never out of scope: out-of-scope entries naming only such paths are ignored (reported as
+`ignoredOutOfScope`), and a verifier `fail` with nothing else behind it does not fail the unit.
 Without a verifier, a pass always requires human acceptance.
 
 On pass the unit moves to `done`. On fail it returns to `building` with the findings and `attempts`

@@ -83,13 +83,28 @@ export async function runCommands(root, commands, { timeoutSec, signal, onProgre
   return (await Promise.all(commandGroups(commands, parallel).map(runGroup))).flat();
 }
 
+/** ICED's own records (unit files, evidence, metrics, config, tmp): never a scope violation. */
+export function isIcedOwnedPath(p) {
+  const s = String(p ?? "").trim().replace(/^[`'"(\[]+|[`'",.;:)\]]+$/g, "").replace(/\\/g, "/").replace(/^(\.\/)+/, "");
+  return s.startsWith(".iced/") || s === ".iced" || s.startsWith("intent/") || s === "intent";
+}
+
+/**
+ * True when an out-of-scope entry from a verifier only names ICED-owned paths (for example
+ * ".iced/metrics.jsonl (ICED bookkeeping, harmless)"). Entries naming no path at all are kept.
+ */
+export function isIcedBookkeeping(entry) {
+  const paths = String(entry ?? "").split(/\s+/).filter((t) => /[\\/]/.test(t) && /[A-Za-z0-9]/.test(t));
+  return paths.length > 0 && paths.every(isIcedOwnedPath);
+}
+
 export function changedFiles(root, baseRef) {
   const lines = [];
   const diff = baseRef ? git(root, ["diff", "--name-only", baseRef]) : git(root, ["diff", "--name-only", "HEAD"]);
   if (diff) lines.push(...diff.split(/\r?\n/));
   const untracked = git(root, ["ls-files", "--others", "--exclude-standard"]);
   if (untracked) lines.push(...untracked.split(/\r?\n/));
-  return [...new Set(lines.map((l) => l.trim()).filter((l) => l && !l.startsWith("intent/") && !l.startsWith(".iced/")))].sort();
+  return [...new Set(lines.map((l) => l.trim()).filter((l) => l && !isIcedOwnedPath(l)))].sort();
 }
 
 /** Constraints and failure conditions of the unit and its ancestors, with qualified ids for ancestors. */
@@ -206,6 +221,11 @@ export function buildVerifierPrompt({ unit, ancestorUnits = [], summary, evidenc
     lines.push(r.skipped ? `- \`${r.command}\` skipped (an earlier step failed)` : `- \`${r.command}\` exit ${r.exitCode}${r.timedOut ? " (timed out)" : ""}\n\n\`\`\`text\n${tail(r.output ?? r.tail ?? "", PROMPT_OUTPUT)}\n\`\`\``);
   }
   lines.push("", "## Files changed since approval", files.length ? files.map((f) => `- ${f}`).join("\n") : "(none detected, or no git)", "");
+  lines.push(
+    "Files under `intent/` and `.iced/` (unit files, evidence, verify results, `.iced/metrics.jsonl`, config, tmp) are",
+    "ICED's own records, written by the tooling during this workflow. They are never out of scope: do not list them in",
+    "`outOfScope` and do not fail the unit because of them.", "",
+  );
   if (rubric) lines.push("## Rubric", "", rubric.trim(), "");
   lines.push(
     "## What to check",
@@ -320,15 +340,18 @@ export function computeVerdict({ unit, ancestorUnits = [], evidence = [], comman
     if (violated) problems.push(`Constraint [${c.id}] violated: ${v?.evidence ?? ""}`);
     return { ...c, violated, checked: Boolean(v), evidence: v?.evidence ?? "" };
   });
-  const outOfScope = haveVerifier && Array.isArray(verifier.outOfScope)
+  const flagged = haveVerifier && Array.isArray(verifier.outOfScope)
     ? verifier.outOfScope.filter((x) => typeof x === "string" && x.trim() && !/^path or change/i.test(x)) : [];
+  const ignoredOutOfScope = flagged.filter(isIcedBookkeeping);
+  const outOfScope = flagged.filter((x) => !isIcedBookkeeping(x));
   for (const x of outOfScope) problems.push(`Out of scope: ${x}`);
-  if (haveVerifier && verifier.verdict === "fail" && !problems.length) problems.push(`Verifier failed the unit: ${verifier.notes ?? "no detail"}`);
+  // A bare "fail" with nothing concrete behind it still fails, unless the only thing flagged was ICED bookkeeping.
+  if (haveVerifier && verifier.verdict === "fail" && !problems.length && !ignoredOutOfScope.length) problems.push(`Verifier failed the unit: ${verifier.notes ?? "no detail"}`);
 
   const verdict = problems.filter((p) => !p.startsWith("Independent verifier unavailable")).length ? "fail" : "pass";
   return {
     verdict, independent: haveVerifier, needsHuman, commandsOk, problems,
-    expectations, failures: failureResults, constraints: constraintResults, outOfScope,
+    expectations, failures: failureResults, constraints: constraintResults, outOfScope, ignoredOutOfScope,
     notes: haveVerifier ? String(verifier.notes ?? "") : "",
   };
 }
