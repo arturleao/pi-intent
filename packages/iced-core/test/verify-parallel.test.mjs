@@ -77,6 +77,39 @@ test("mergeVerifierReports: any failure wins, pass beats unknown", () => {
   assert.equal(mergeVerifierReports([]), null);
 });
 
+test("mergeVerifierReports: explicit rule checks outrank malformed checks, violations win", () => {
+  const reports = [
+    { verdict: "pass", constraints: [{ id: "C1", violated: "false" }], failures: [{ id: "F1" }] },
+    { verdict: "pass", constraints: [{ id: "C1", violated: false }], failures: [{ id: "F1", triggered: false }] },
+  ];
+  for (const list of [reports, [...reports].reverse()]) {
+    const merged = mergeVerifierReports(list);
+    assert.equal(merged.constraints[0].violated, false);
+    assert.equal(merged.failures[0].triggered, false);
+  }
+  const violation = { verdict: "fail", constraints: [{ id: "C1", violated: true }], failures: [{ id: "F1", triggered: true }] };
+  const singleton = { verdict: "pass", constraints: reports.flatMap((r) => r.constraints).concat(violation.constraints), failures: reports.flatMap((r) => r.failures).concat(violation.failures) };
+  for (const list of [[violation, ...reports], [...reports, violation], [singleton]]) {
+    const merged = mergeVerifierReports(list);
+    assert.equal(merged.constraints[0].violated, true);
+    assert.equal(merged.failures[0].triggered, true);
+  }
+});
+
+test("submitUnit: incomplete rule coverage cannot auto-accept, complete coverage can", async (t) => {
+  for (const complete of [false, true]) {
+    const root = repoWithUnit({ autonomy: 2, risk: "low" }, { lenses: "single" });
+    t.after(() => cleanup(root));
+    const u = core.readUnit(root, "001-dark-mode");
+    core.updateFrontmatter(root, u.id, { contract_hash: core.contractHash(u.text) });
+    const report = { verdict: "pass", expectations: [{ id: "E1", result: "pass" }, { id: "E2", result: "pass" }],
+      ...(complete ? { constraints: [{ id: "C1", violated: false }, { id: "C2", violated: false }], failures: [{ id: "F1", triggered: false }] } : {}) };
+    const res = await submitUnit({ root, id: u.id, evidence, agent: async () => ({ ok: true, text: `\`\`\`json\n${JSON.stringify(report)}\n\`\`\`` }) });
+    assert.equal(res.outcome, complete ? "accepted" : "done");
+    assert.equal(res.report.result.needsHuman, !complete);
+  }
+});
+
 test("submitUnit: three verifiers run in parallel and a pass moves the unit to done", async (t) => {
   const root = repoWithUnit({ tier: "M" });
   const log = path.join(os.tmpdir(), `iced-fake-${process.pid}-${Date.now()}.log`);

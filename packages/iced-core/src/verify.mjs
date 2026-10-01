@@ -266,13 +266,17 @@ export function parseVerifierOutput(text) {
   return null;
 }
 
-const byId = (list, id) => (Array.isArray(list) ? list.find((x) => String(x?.id ?? "").toUpperCase() === id.toUpperCase()) : undefined);
+const booleanRank = (value) => value === true ? 2 : value === false ? 1 : 0;
+
+const byId = (list, id, booleanField = null) => {
+  const matches = Array.isArray(list) ? list.filter((x) => String(x?.id ?? "").toUpperCase() === id.toUpperCase()) : [];
+  return booleanField ? matches.reduce((best, item) => !best || booleanRank(item[booleanField]) > booleanRank(best[booleanField]) ? item : best, undefined) : matches[0];
+};
 
 /** Merge answers from parallel verifiers: any fail, trigger or violation wins; pass beats unknown. */
 export function mergeVerifierReports(reports) {
   const list = (reports ?? []).filter(Boolean);
   if (!list.length) return null;
-  if (list.length === 1) return list[0];
   const RANK = { fail: 3, pass: 2, unknown: 1 };
   const joinEvidence = (a, b) => [a, b].filter((x) => typeof x === "string" && x.trim()).filter((x, i, all) => all.indexOf(x) === i).join(" | ");
   const merge = (key, worse) => {
@@ -293,8 +297,8 @@ export function mergeVerifierReports(reports) {
   return {
     verdict: list.some((r) => r.verdict === "fail") ? "fail" : "pass",
     expectations: merge("expectations", (a, b) => (RANK[a.result] ?? 0) > (RANK[b.result] ?? 0)),
-    failures: merge("failures", (a, b) => a.triggered === true && b.triggered !== true),
-    constraints: merge("constraints", (a, b) => a.violated === true && b.violated !== true),
+    failures: merge("failures", (a, b) => booleanRank(a.triggered) > booleanRank(b.triggered)),
+    constraints: merge("constraints", (a, b) => booleanRank(a.violated) > booleanRank(b.violated)),
     outOfScope: [...new Set(list.flatMap((r) => (Array.isArray(r.outOfScope) ? r.outOfScope : [])))],
     notes: list.map((r) => (r.notes ? `${r.lens ? `[${r.lens}] ` : ""}${r.notes}` : "")).filter(Boolean).join("\n"),
   };
@@ -328,17 +332,26 @@ export function computeVerdict({ unit, ancestorUnits = [], evidence = [], comman
     return { ...base, result, evidence: v?.evidence ?? "" };
   });
 
+  const uncheckedRules = [];
+  const ruleChecked = (v, field, id, kind) => {
+    const checked = typeof v?.[field] === "boolean";
+    if (haveVerifier && !checked) {
+      needsHuman = true;
+      uncheckedRules.push(`${kind} [${id}] has no explicit boolean ${field} result; human review required.`);
+    }
+    return checked;
+  };
   const failureResults = failures.map((f) => {
-    const v = haveVerifier ? byId(verifier.failures, f.id) : undefined;
+    const v = haveVerifier ? byId(verifier.failures, f.id, "triggered") : undefined;
     const triggered = v?.triggered === true;
     if (triggered) problems.push(`Failure condition [${f.id}] triggered: ${v?.evidence ?? ""}`);
-    return { ...f, triggered, checked: Boolean(v), evidence: v?.evidence ?? "" };
+    return { ...f, triggered, checked: ruleChecked(v, "triggered", f.id, "Failure condition"), evidence: v?.evidence ?? "" };
   });
   const constraintResults = constraints.map((c) => {
-    const v = haveVerifier ? byId(verifier.constraints, c.id) : undefined;
+    const v = haveVerifier ? byId(verifier.constraints, c.id, "violated") : undefined;
     const violated = v?.violated === true;
     if (violated) problems.push(`Constraint [${c.id}] violated: ${v?.evidence ?? ""}`);
-    return { ...c, violated, checked: Boolean(v), evidence: v?.evidence ?? "" };
+    return { ...c, violated, checked: ruleChecked(v, "violated", c.id, "Constraint"), evidence: v?.evidence ?? "" };
   });
   const flagged = haveVerifier && Array.isArray(verifier.outOfScope)
     ? verifier.outOfScope.filter((x) => typeof x === "string" && x.trim() && !/^path or change/i.test(x)) : [];
@@ -352,7 +365,7 @@ export function computeVerdict({ unit, ancestorUnits = [], evidence = [], comman
   return {
     verdict, independent: haveVerifier, needsHuman, commandsOk, problems,
     expectations, failures: failureResults, constraints: constraintResults, outOfScope, ignoredOutOfScope,
-    notes: haveVerifier ? String(verifier.notes ?? "") : "",
+    notes: [haveVerifier ? String(verifier.notes ?? "") : "", ...uncheckedRules].filter(Boolean).join("\n"),
   };
 }
 

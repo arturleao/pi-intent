@@ -34,6 +34,37 @@ test("verdict: pass with independent verifier", () => {
   assert.deepEqual(v.problems, []);
 });
 
+test("verdict: missing or malformed own and inherited rule checks require human review", () => {
+  for (const value of [undefined, null, "false", 0, {}]) {
+    const v = computeVerdict({ unit: unitOf(), ancestorUnits: [parent()], evidence, verifier: {
+      ...passing,
+      failures: [{ id: "F1", triggered: value }],
+      constraints: [{ id: "C1", violated: value }, { id: "C2", violated: false }],
+    } });
+    assert.equal(v.verdict, "pass");
+    assert.equal(v.needsHuman, true);
+    assert.equal(v.failures[0].checked, false);
+    assert.equal(v.constraints[0].checked, false);
+    assert.equal(v.constraints[1].checked, true);
+    for (const id of ["F1", "C1", "000-program:F1", "000-program:C1"]) assert.ok(v.notes.includes(`[${id}]`));
+  }
+  const omitted = computeVerdict({ unit: unitOf(), evidence, verifier: { verdict: "pass", expectations: passing.expectations } });
+  assert.equal(omitted.needsHuman, true);
+  assert.ok(omitted.constraints.every((c) => !c.checked));
+});
+
+test("verdict: duplicate own and inherited rule entries cannot hide violations", () => {
+  const rules = collectRules(unitOf(), [parent()]);
+  const verifier = { ...passing,
+    constraints: rules.constraints.flatMap((c) => [{ id: c.id, violated: false }, { id: c.id }, { id: c.id.toLowerCase(), violated: true }]),
+    failures: rules.failures.flatMap((f) => [{ id: f.id, triggered: false }, { id: f.id, triggered: "false" }, { id: f.id, triggered: true }]),
+  };
+  const v = computeVerdict({ unit: unitOf(), ancestorUnits: [parent()], evidence, verifier });
+  assert.equal(v.verdict, "fail");
+  assert.ok(v.constraints.every((c) => c.violated));
+  assert.ok(v.failures.every((f) => f.triggered));
+});
+
 test("verdict: failures of every kind", () => {
   const base = { unit: unitOf(), evidence, commandResults: [], verifier: passing };
   assert.equal(computeVerdict({ ...base, commandResults: [{ command: "npm test", exitCode: 1 }] }).verdict, "fail");
