@@ -1,0 +1,55 @@
+name: Publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create GitHub release
+  id-token: write # npm trusted publishing (OIDC) + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # Trusted publishing requires npm >= 11.5.1
+      - run: npm install -g npm@latest
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Verify tag matches both package versions
+        run: |
+          for dir in packages/iced-core packages/pi-intent; do
+            pkg="v$(node -p "require('./$dir/package.json').version")"
+            if [ "$pkg" != "$GITHUB_REF_NAME" ]; then
+              echo "::error::tag $GITHUB_REF_NAME != $dir/package.json $pkg"
+              exit 1
+            fi
+          done
+
+      # iced-core first: pi-intent depends on it.
+      - name: Publish packages (skip versions already on npm)
+        run: |
+          for dir in packages/iced-core packages/pi-intent; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "::notice::$name@$version already published, skipping"
+            else
+              npm publish -w "$dir" --provenance --access public
+            fi
+          done
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
