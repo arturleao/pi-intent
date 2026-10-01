@@ -1,6 +1,6 @@
 {
   "name": "@arturleao/iced-core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "ICED (Intent, Context, Expectations, Done): host-neutral core library for intent-driven development with independent verification",
   "type": "module",
   "license": "MIT",
