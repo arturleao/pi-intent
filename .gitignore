@@ -2,6 +2,7 @@ node_modules/
 # Local pi project config (MCP servers reference personal tokens by env var name)
 .pi/
 *.log
+*.tgz
 .DS_Store
 .iced/active
 .iced/tmp/
