@@ -1,0 +1,165 @@
+{
+  "id": "006-fix-finding-5-from-bug-hunt-report-md-al",
+  "title": "Stop cancelled verification work",
+  "attempt": 1,
+  "ts": "2026-10-01T16:11:46Z",
+  "summary": "Pre-aborted processes return explicit cancelled non-success without spawn. Running processes recheck signal after listener registration and clean up on close. Pipeline checks cancellation between checks and agents and before reports; cancelled submit returns building with unchanged attempts. C3 permits batch artifacts.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/iced-core/test/verify.test.mjs: runProcess: pre-aborted and mid-process cancellation prevent successful execution and clean listeners",
+      "note": "Checks marker absence, running-child abort, event listener cleanup, normal completion and timeout."
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/iced-core/test/verify.test.mjs: cancellation: sequential checks and verifier/test-writer calls stop before new launches"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test; git diff --check",
+      "note": "116 tests passed including submitUnit cancellation preserves building and attempts without reports; diff whitespace check passed."
+    }
+  ],
+  "files": [
+    "BUG-HUNT-REPORT.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/iced-core/src/verify.mjs",
+    "packages/iced-core/test/core.test.mjs",
+    "packages/iced-core/test/models.test.mjs",
+    "packages/iced-core/test/verify-parallel.test.mjs",
+    "packages/iced-core/test/verify.test.mjs",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs",
+    "packages/pi-intent/test/runner.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 12665,
+      "timedOut": false,
+      "tail": "...int violation fails the child (0.1708ms)\n✔ verdict: manual unknown needs a human; no verifier needs a human (0.2009ms)\n✔ parseVerifierOutput takes the last JSON verdict block (0.2502ms)\n✔ verifier prompt carries contract, claims, inherited rules and answer format (0.2032ms)\n✔ runProcess: pre-aborted and mid-process cancellation prevent successful execution and clean listeners (2195.3715ms)\n✔ cancellation: sequential checks and verifier/test-writer calls stop before new launches (299.4134ms)\n✔ submitUnit: cancellation preserves building and attempts without reports (223.2966ms)\n✔ runCommands captures exit codes (218.9145ms)\n✔ verifyUnit writes evidence.md and verify.json (402.2829ms)\n✔ verifyUnit skips the verifier when evidence is missing (169.7644ms)\n✔ verifiers see the full check output and are told it is evidence; reports keep only the tail (786.8883ms)\nℹ tests 80\nℹ suites 0\nℹ pass 80\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 8979.0969\n\n> @arturleao/pi-intent@0.1.1 test\n> node --test \"test/*.test.mjs\"\n\n✔ classifyPath (1.9975ms)\n✔ isMutatingShell (1.7745ms)\n✔ verifier tools: read, grep, find and ls only; write, edit and every shell are blocked (0.4579ms)\n✔ the extension's verifier role uses the verifier tool rule for every tool call (0.4795ms)\n✔ extension: invalid submission reports errors before success report handling (0.3725ms)\n✔ changedProtectedKeys (0.412ms)\n✔ gate: no active unit leaves normal work alone but still protects ICED files (6.0783ms)\n✔ gate always: no active unit blocks code and mutating shell, allows reads and commits (1.2344ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (7.3901ms)\n✔ gate: original-file multi-edits cannot bypass protected status (5.5259ms)\n✔ gate: unpredictable draft edits fail closed (8.2805ms)\n✔ gate: building allows code, freezes the contract (7.1733ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (29.4606ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (11.1511ms)\n✔ no file targets another harness or the removed CLI (86.5855ms)\n✔ removed paths stay removed (83.5742ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.298ms)\n✔ no package exposes a CLI (0.356ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (808.351ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (811.3803ms)\n✔ every module the extension imports is in the tarball or a declared dependency (789.4398ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3684ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.463ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.7511ms)\n✔ models without thinking only toggle off and say so (0.1919ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1413ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.1663ms)\n✔ typing filters models but keeps actions and rotations (0.1612ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.215ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1054ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.799ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.107ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (316.8778ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (999.6123ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (339.6642ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (393.5121ms)\nℹ tests 36\nℹ suites 0\nℹ pass 36\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2571.5261\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 46438
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": true,
+    "needsHuman": false,
+    "commandsOk": true,
+    "problems": [],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "Pre-aborted runProcess returns non-success cancellation result without executing child; mid-process abort returns promptly and clears listeners/timer.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/verify.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/iced-core/test/verify.test.mjs: runProcess: pre-aborted and mid-process cancellation prevent successful execution and clean listeners",
+            "note": "Checks marker absence, running-child abort, event listener cleanup, normal completion and timeout."
+          }
+        ],
+        "result": "pass",
+        "evidence": "Read packages/iced-core/src/verify.mjs and referenced regression test. Pre-abort returns cancelled:true and exitCode:-1 before spawn; test confirms no marker file. Mid-process test confirms prompt termination and listener removal. Close handler clears timer. Supplied npm test output confirms pass."
+      },
+      {
+        "id": "E2",
+        "text": "Cancellation prevents subsequent sequential checks and new verifier/test-writer agent calls.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/verify.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/iced-core/test/verify.test.mjs: cancellation: sequential checks and verifier/test-writer calls stop before new launches"
+          }
+        ],
+        "result": "pass",
+        "evidence": "Cancellation guards precede sequential commands and verifier launches. Tests confirm second command never executes, pre-aborted verifier/test-writer make zero agent calls, and cancellation before verifier stage prevents launches and reports. Named tests passed."
+      },
+      {
+        "id": "E3",
+        "text": "Cancelled submitUnit stays building with unchanged attempts and no successful report, while normal tests pass.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test; git diff --check",
+            "note": "116 tests passed including submitUnit cancellation preserves building and attempts without reports; diff whitespace check passed."
+          }
+        ],
+        "result": "pass",
+        "evidence": "Submission regression covers cancellation before submission, during checks, and during verifier response with autonomy 2. Assertions require building status, unchanged attempts, absent reports, and empty metrics. Supplied npm test passed all 116 tests."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "Pre-aborted signal still executes child command.",
+        "from": "006-fix-finding-5-from-bug-hunt-report-md-al",
+        "triggered": false,
+        "checked": true,
+        "evidence": "runProcess checks signal.aborted before spawn; passing marker-file regression confirms child command never executes."
+      },
+      {
+        "id": "F2",
+        "text": "Cancellation allows later commands or verifiers to launch or unit to become done/accepted.",
+        "from": "006-fix-finding-5-from-bug-hunt-report-md-al",
+        "triggered": false,
+        "checked": true,
+        "evidence": "Pipeline checks cancellation around asynchronous work and before report generation. Submission catches cancellation and restores building before applyVerdict."
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Preserve runProcess non-throwing result API and normal timeout behavior.",
+        "from": "006-fix-finding-5-from-bug-hunt-report-md-al",
+        "violated": false,
+        "checked": true,
+        "evidence": "Cancellation resolves non-success process result rather than throwing. Passing tests retain normal exit success and timeout behavior."
+      },
+      {
+        "id": "C2",
+        "text": "Cancelled submission leaves unit building without consuming an attempt or publishing a successful report.",
+        "from": "006-fix-finding-5-from-bug-hunt-report-md-al",
+        "violated": false,
+        "checked": true,
+        "evidence": "Passing submission tests assert unchanged attempts, building status, no verify.json or evidence.md, and no metrics after cancellation."
+      },
+      {
+        "id": "C3",
+        "text": "BUG-HUNT-REPORT.md and changes implementing the other four approved bug-hunt units are allowed batch artifacts, not out-of-scope violations; this unit remains responsible only for cancellation propagation.",
+        "from": "006-fix-finding-5-from-bug-hunt-report-md-al",
+        "violated": false,
+        "checked": true,
+        "evidence": "BUG-HUNT-REPORT.md and companion findings are permitted batch artifacts; cancellation implementation stays within process and verification pipeline."
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": "Read-only review. Used supplied tooling results; no commands rerun. Process-tree termination redesign remains excluded."
+  },
+  "verdict": "pass"
+}

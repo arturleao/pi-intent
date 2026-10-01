@@ -1,0 +1,173 @@
+{
+  "id": "003-fix-finding-2-from-bug-hunt-report-md-in",
+  "title": "Require verifier rule coverage before auto-acceptance",
+  "attempt": 2,
+  "ts": "2026-10-01T15:52:53Z",
+  "summary": "Added explicit boolean coverage and human-review notes. Fixed verifier-discovered duplicate-ID loophole: singleton reports normalized by merge, direct rule lookup ranks all duplicate matches so true violations cannot hide. C3 permits batch artifacts.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/iced-core/test/verify.test.mjs: missing or malformed own and inherited rule checks require human review; duplicate own and inherited rule entries cannot hide violations"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/iced-core/test/verify-parallel.test.mjs: incomplete rule coverage cannot auto-accept, complete coverage can"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test",
+      "note": "Singleton and parallel duplicate rule merge regression tests added; checks rerun by tooling."
+    }
+  ],
+  "files": [
+    "BUG-HUNT-REPORT.md",
+    "packages/iced-core/src/guard.mjs",
+    "packages/iced-core/src/verify.mjs",
+    "packages/iced-core/test/verify-parallel.test.mjs",
+    "packages/iced-core/test/verify.test.mjs",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 13668,
+      "timedOut": false,
+      "tail": "...lformed own and inherited rule checks require human review (1.1384ms)\n✔ verdict: duplicate own and inherited rule entries cannot hide violations (0.4377ms)\n✔ verdict: failures of every kind (0.5663ms)\n✔ verdict: ICED's own files flagged out of scope do not fail the unit (0.5301ms)\n✔ verifier prompt says ICED's own files are never out of scope (0.5162ms)\n✔ verdict: inherited constraint violation fails the child (0.2229ms)\n✔ verdict: manual unknown needs a human; no verifier needs a human (0.3071ms)\n✔ parseVerifierOutput takes the last JSON verdict block (0.3358ms)\n✔ verifier prompt carries contract, claims, inherited rules and answer format (0.2858ms)\n✔ runCommands captures exit codes (273.0693ms)\n✔ verifyUnit writes evidence.md and verify.json (415.2819ms)\n✔ verifyUnit skips the verifier when evidence is missing (172.6193ms)\n✔ verifiers see the full check output and are told it is evidence; reports keep only the tail (756.3746ms)\nℹ tests 74\nℹ suites 0\nℹ pass 74\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 7875.2375\n\n> @arturleao/pi-intent@0.1.1 test\n> node --test \"test/*.test.mjs\"\n\n✔ classifyPath (2.8823ms)\n✔ isMutatingShell (2.3221ms)\n✔ verifier tools: read, grep, find and ls only; write, edit and every shell are blocked (0.6644ms)\n✔ the extension's verifier role uses the verifier tool rule for every tool call (4.4941ms)\n✔ changedProtectedKeys (0.6647ms)\n✔ gate: no active unit leaves normal work alone but still protects ICED files (6.9106ms)\n✔ gate always: no active unit blocks code and mutating shell, allows reads and commits (1.9304ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (12.3596ms)\n✔ gate: original-file multi-edits cannot bypass protected status (7.647ms)\n✔ gate: unpredictable draft edits fail closed (11.1665ms)\n✔ gate: building allows code, freezes the contract (9.3335ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (34.5846ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (13.3997ms)\n✔ no file targets another harness or the removed CLI (142.0247ms)\n✔ removed paths stay removed (114.5525ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.5127ms)\n✔ no package exposes a CLI (0.4938ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (1937.4237ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (1048.927ms)\n✔ every module the extension imports is in the tarball or a declared dependency (1039.6682ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.4284ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.7097ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (1.0586ms)\n✔ models without thinking only toggle off and say so (0.2907ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.2128ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.2448ms)\n✔ typing filters models but keeps actions and rotations (0.2253ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2998ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1436ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (1.3124ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.2235ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (452.1329ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1214.2243ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (429.5634ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (493.1676ms)\nℹ tests 35\nℹ suites 0\nℹ pass 35\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4236.5818\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "expectations",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 37821
+    },
+    {
+      "name": "failures",
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 25660
+    },
+    {
+      "name": "rules",
+      "model": "openai-codex/gpt-5.6-terra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 45782
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": true,
+    "needsHuman": false,
+    "commandsOk": true,
+    "problems": [],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "Omitted own or inherited constraint/failure entries and non-boolean results require human review with actionable diagnostics.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/verify.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/iced-core/test/verify.test.mjs: missing or malformed own and inherited rule checks require human review; duplicate own and inherited rule entries cannot hide violations"
+          }
+        ],
+        "result": "pass",
+        "evidence": "Read verify.test.mjs and verify.mjs. Missing entries and non-boolean results set needsHuman; diagnostics name rule ID and required boolean field. collectRules includes qualified inherited rules. Supplied output confirms regression tests pass. | In computeVerdict, `ruleChecked` requires `typeof v[field] === 'boolean'` for every own and inherited constraint and failure. A missing or non-boolean entry sets needsHuman and adds an actionable note ('has no explicit boolean ... result; human review required'). The named tests 'missing or malformed own and inherited rule checks require human review' and 'duplicate own and inherited rule entries cannot hide violations' pass. I did not read the test bodies. | Read computeVerdict ruleChecked logic: non-boolean or absent triggered/violated sets needsHuman and records qualified diagnostics. verify.test covers omitted/malformed own and inherited rules; npm test passed."
+      },
+      {
+        "id": "E2",
+        "text": "Autonomy-2 submission with incomplete rule coverage reaches done but never accepted; complete passing coverage remains auto-acceptable.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/verify-parallel.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/iced-core/test/verify-parallel.test.mjs: incomplete rule coverage cannot auto-accept, complete coverage can"
+          }
+        ],
+        "result": "pass",
+        "evidence": "Read autonomy-2 submitUnit regression: omitted coverage returns done with needsHuman=true; complete passing coverage returns accepted. applyVerdict gates acceptance on !needsHuman. Supplied output confirms test passes. | applyVerdict auto-accepts only when `!r.needsHuman`, so incomplete coverage reaches done, not accepted. The test 'submitUnit: incomplete rule coverage cannot auto-accept, complete coverage can' passes. I did not read its body. | Read applyVerdict: auto-accept requires !needsHuman. verify-parallel test proves incomplete autonomy-2 report yields done, complete explicit coverage yields accepted. npm test passed."
+      },
+      {
+        "id": "E3",
+        "text": "Parallel reports combine explicit checks without losing violations, and existing suite passes.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test",
+            "note": "Singleton and parallel duplicate rule merge regression tests added; checks rerun by tooling."
+          }
+        ],
+        "result": "pass",
+        "evidence": "Merge tests cover reversed report order, malformed versus explicit checks, true violations, and singleton duplicate IDs. Direct verdict tests cover duplicate own and inherited violations. Implementation ranks true above false above malformed. Supplied npm test exits 0: 74 core and 35 integration tests pass. | npm test exited 0 with 74 core and 35 pi-intent tests passing. The merge tests 'any failure wins' and 'explicit rule checks outrank malformed checks, violations win' pass. In mergeVerifierReports, `booleanRank` ranks true above false above malformed, so a violation survives merging. finishVerification always merges, including a single report, so duplicate IDs are normalized. | Read mergeVerifierReports and byId: true violation outranks false/malformed entries; merged reports preserve failure wins. Duplicate singleton/parallel regressions pass in npm test."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "Omitted or malformed rule results permit automatic acceptance.",
+        "from": "003-fix-finding-2-from-bug-hunt-report-md-in",
+        "triggered": false,
+        "checked": true,
+        "evidence": "Unchecked merged rules require human review; absent verifier also requires review. Automatic acceptance checks needsHuman. | Omitted or non-boolean rule results set needsHuman, which blocks auto-accept. Partial coverage in one lens is acceptable when another lens covers the rule, because merged coverage is what counts. A lens that fails to answer also sets needsHuman in finishVerification. | Absent and malformed rule fields set needsHuman before applyVerdict auto-acceptance gate."
+      },
+      {
+        "id": "F2",
+        "text": "A violation is lost while merging reports with missing or malformed results.",
+        "from": "003-fix-finding-2-from-bug-hunt-report-md-in",
+        "triggered": false,
+        "checked": true,
+        "evidence": "mergeVerifierReports and boolean-field byId lookup preserve explicit true despite missing, malformed, false, or duplicate entries. | The merge ranks true > false > malformed. byId picks the highest-ranked duplicate for rules. A true violation therefore cannot be hidden by a duplicate, a missing entry or a malformed entry. | Boolean ranking gives explicit true highest rank in merge and direct rule lookup; regression tests cover duplicate entries."
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Preserve any-failure-wins behavior across parallel reports and inherited rules.",
+        "from": "003-fix-finding-2-from-bug-hunt-report-md-in",
+        "violated": false,
+        "checked": true,
+        "evidence": "Explicit violations dominate merging and direct lookup, including inherited qualified IDs; computeVerdict records violations as failures. | Any-failure-wins is preserved: the merged verdict is fail if any report fails, and the failure and constraint merges let triggered/violated true win. | Merged true failure/constraint results become verification problems; inherited rules collected and checked."
+      },
+      {
+        "id": "C2",
+        "text": "Incomplete rule coverage requires human acceptance; explicit violations still fail verification.",
+        "from": "003-fix-finding-2-from-bug-hunt-report-md-in",
+        "violated": false,
+        "checked": true,
+        "evidence": "Incomplete coverage sets needsHuman without itself failing verification; explicit violations still populate problems and produce fail. | Incomplete coverage sets needsHuman but not a failing verdict. Explicit true triggered/violated still adds a problem and fails the unit. | Incomplete coverage needs human review; explicit true results fail verdict."
+      },
+      {
+        "id": "C3",
+        "text": "BUG-HUNT-REPORT.md and changes implementing the other four approved bug-hunt units are allowed batch artifacts, not out-of-scope violations; this unit remains responsible only for verifier rule coverage.",
+        "from": "003-fix-finding-2-from-bug-hunt-report-md-in",
+        "violated": false,
+        "checked": true,
+        "evidence": "Coverage implementation and regression tests stay within unit scope. Listed bug-hunt report and sibling-unit artifacts are expressly permitted. | Changes to guard.mjs, gate.mjs and BUG-HUNT-REPORT.md are covered by the batch-artifact allowance. The verify.mjs changes stay within the unit's scope. | BUG-HUNT-REPORT.md and finding-1 guard/gate batch artifacts explicitly allowed by unit constraint."
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": "[expectations] Read-only review. Used supplied tooling output as execution evidence; no files changed.\n[failures] Minor, not blocking: a string such as 'true' for triggered/violated is treated as unchecked and needs human review. It is not treated as a violation. A merged report whose verdict is missing or malformed counts as pass for the verdict, but expectation and rule coverage still gate acceptance. In computeVerdict, byId for expectations still takes the first duplicate. finishVerification merges first, so the real pipeline is unaffected.\n[rules] No inherited parent: parent is null."
+  },
+  "verdict": "pass"
+}

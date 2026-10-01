@@ -1,0 +1,176 @@
+{
+  "id": "004-fix-finding-3-from-bug-hunt-report-md-du",
+  "title": "Reject duplicate canonical unit sections",
+  "attempt": 1,
+  "ts": "2026-10-01T15:59:47Z",
+  "summary": "Added case-insensitive canonical section duplicate lint across stages, approval/acceptance regression and compatibility tests, clarified spec. Hash algorithm unchanged. C3 allows report and sibling fixes.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/iced-core/test/core.test.mjs: duplicate canonical sections fail every lint stage case-insensitively"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/iced-core/test/core.test.mjs: duplicate contract sections block approval and acceptance"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test",
+      "note": "Commented headings and unknown repeated sections tested; previous-release hash compatibility remains pinned."
+    }
+  ],
+  "files": [
+    "BUG-HUNT-REPORT.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/iced-core/src/verify.mjs",
+    "packages/iced-core/test/core.test.mjs",
+    "packages/iced-core/test/verify-parallel.test.mjs",
+    "packages/iced-core/test/verify.test.mjs",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 10346,
+      "timedOut": false,
+      "tail": "...ing or malformed own and inherited rule checks require human review (0.6548ms)\n✔ verdict: duplicate own and inherited rule entries cannot hide violations (0.2858ms)\n✔ verdict: failures of every kind (0.3597ms)\n✔ verdict: ICED's own files flagged out of scope do not fail the unit (0.3533ms)\n✔ verifier prompt says ICED's own files are never out of scope (0.3738ms)\n✔ verdict: inherited constraint violation fails the child (0.1622ms)\n✔ verdict: manual unknown needs a human; no verifier needs a human (0.2004ms)\n✔ parseVerifierOutput takes the last JSON verdict block (0.2759ms)\n✔ verifier prompt carries contract, claims, inherited rules and answer format (0.2047ms)\n✔ runCommands captures exit codes (218.7879ms)\n✔ verifyUnit writes evidence.md and verify.json (391.4918ms)\n✔ verifyUnit skips the verifier when evidence is missing (143.6957ms)\n✔ verifiers see the full check output and are told it is evidence; reports keep only the tail (586.1677ms)\nℹ tests 76\nℹ suites 0\nℹ pass 76\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 6802.2464\n\n> @arturleao/pi-intent@0.1.1 test\n> node --test \"test/*.test.mjs\"\n\n✔ classifyPath (2.0545ms)\n✔ isMutatingShell (1.8197ms)\n✔ verifier tools: read, grep, find and ls only; write, edit and every shell are blocked (0.4615ms)\n✔ the extension's verifier role uses the verifier tool rule for every tool call (0.5484ms)\n✔ changedProtectedKeys (0.4416ms)\n✔ gate: no active unit leaves normal work alone but still protects ICED files (4.3942ms)\n✔ gate always: no active unit blocks code and mutating shell, allows reads and commits (1.2659ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (8.5765ms)\n✔ gate: original-file multi-edits cannot bypass protected status (6.2314ms)\n✔ gate: unpredictable draft edits fail closed (7.6262ms)\n✔ gate: building allows code, freezes the contract (22.0741ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (28.5312ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (9.6506ms)\n✔ no file targets another harness or the removed CLI (91.2277ms)\n✔ removed paths stay removed (83.7524ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.296ms)\n✔ no package exposes a CLI (0.3507ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (790.9672ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (752.5395ms)\n✔ every module the extension imports is in the tarball or a declared dependency (763.0456ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3176ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.4821ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.6681ms)\n✔ models without thinking only toggle off and say so (0.1909ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1438ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.1703ms)\n✔ typing filters models but keeps actions and rotations (0.1649ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2046ms)\n✔ createPicker marks already-picked refs and ignores extras (0.0984ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.8186ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.102ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (298.9162ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (955.4741ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (302.782ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (424.9596ms)\nℹ tests 35\nℹ suites 0\nℹ pass 35\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2441.2568\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "expectations",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 42294
+    },
+    {
+      "name": "failures",
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 22001
+    },
+    {
+      "name": "rules",
+      "model": "openai-codex/gpt-5.6-terra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 47032
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": true,
+    "needsHuman": false,
+    "commandsOk": true,
+    "problems": [],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "Repeated canonical level-two headings fail draft, signoff, validate, and accept lint, case-insensitively.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/core.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/iced-core/test/core.test.mjs: duplicate canonical sections fail every lint stage case-insensitively"
+          }
+        ],
+        "result": "pass",
+        "evidence": "core.test.mjs tests all four canonical headings across draft, signoff, validate and accept using uppercase duplicates. core.mjs normalizes headings and rejects repeats before stage-specific rules. Named test passed. | The test 'lint: duplicate canonical sections fail every lint stage case-insensitively' appends an uppercase duplicate of Intent, Context, Expectations and Open questions. It asserts `section-duplicate` at draft, signoff, validate and accept. The lint in core.mjs 254-260 is unconditional. The test passes in the npm test output. | `core.mjs` tracks canonical H2 headings case-insensitively and emits `section-duplicate` before stage rules. `core.test.mjs` tests Intent, Context, Expectations, Open questions across draft/signoff/validate/accept. npm test passed."
+      },
+      {
+        "id": "E2",
+        "text": "Reported duplicate Intent/Expectations example cannot be approved or accepted even when stored hash matches final sections.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/core.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/iced-core/test/core.test.mjs: duplicate contract sections block approval and acceptance"
+          }
+        ],
+        "result": "pass",
+        "evidence": "Regression test rejects duplicate Intent/Expectations approval, then rejects acceptance with evidence present and stored hash matching final sections despite earlier expectation tampering. approveUnit and acceptUnit both stop on lint errors. Named test passed. | The test 'repo ops: duplicate contract sections block approval and acceptance' builds a duplicate Intent/Expectations unit. approveUnit returns ok=false with `section-duplicate`. It then stores a hash that matches the final sections, and acceptUnit also returns ok=false with `section-duplicate`. The test passes. | `approveUnit` runs signoff lint; `acceptUnit` runs accept lint. Regression test creates duplicate Intent/Expectations, proves legacy final-section hash remains unchanged after first-section edit, then proves approval and acceptance return `ok: false` with `section-duplicate`. npm test passed."
+      },
+      {
+        "id": "E3",
+        "text": "Commented headings and repeated unknown sections remain compatible; valid contract hashes and suite pass unchanged.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test",
+            "note": "Commented headings and unknown repeated sections tested; previous-release hash compatibility remains pinned."
+          }
+        ],
+        "result": "pass",
+        "evidence": "Tests confirm commented canonical headings and repeated Notes sections lint clean without changing hash. compat.test.mjs pins previous-release hash and successfully accepts previously approved unit. Supplied npm test output: 111 passed, zero failures. | The same lint test checks that a unit with commented-out headings and repeated '## Notes' sections has no signoff errors and the same contractHash as the plain unit. The previous-release hash and lint tests pass. `npm test` exits 0 with 0 failures. | Duplicate test confirms HTML-comment headings ignored, repeated unknown Notes sections accepted, hash unchanged. `compat.test.mjs` pins prior-release golden hash and validates prior approved unit; both named tests passed in npm output."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "Duplicate canonical headings pass lint or approval.",
+        "from": "004-fix-finding-3-from-bug-hunt-report-md-du",
+        "triggered": false,
+        "checked": true,
+        "evidence": "Canonical duplicate check runs unconditionally; regression tests demonstrate lint and approval rejection. | Duplicates are rejected at all stages and in approve and accept. The parser and the lint agree on what counts as a heading. | Duplicate canonical headings produce lint error at every required stage; approval and acceptance reject duplicates."
+      },
+      {
+        "id": "F2",
+        "text": "Valid existing units need approval hash migration.",
+        "from": "004-fix-finding-3-from-bug-hunt-report-md-du",
+        "triggered": false,
+        "checked": true,
+        "evidence": "Golden previous-release hash still matches; previous-release approved unit passes validation and acceptance. | The hash function is unchanged and the previous-release hash tests pass, so valid existing units need no migration. | Golden prior-release hash test passed; prior approved unit validate/accept compatibility test passed."
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Preserve contract hashes of existing valid units and previous-release compatibility.",
+        "from": "004-fix-finding-3-from-bug-hunt-report-md-du",
+        "violated": false,
+        "checked": true,
+        "evidence": "Hash implementation remains separate from duplicate validation; passing golden-hash and previous-release acceptance tests establish compatibility. | The hash algorithm is unchanged. The pinned previous-release hash test and the previous-release lint test pass. | Hash algorithm unchanged. Golden hash compatibility test passed."
+      },
+      {
+        "id": "C2",
+        "text": "Preserve unknown sections and ignore headings inside HTML comments.",
+        "from": "004-fix-finding-3-from-bug-hunt-report-md-du",
+        "violated": false,
+        "checked": true,
+        "evidence": "parseIced blanks HTML comments before recording headings. Duplicate lint filters only canonical names and performs no rewriting. Repeated unknown-section compatibility test passes. | The lint reads parsed.sections, which come from comment-blanked text. Unknown repeated sections are skipped because they are not in H2. A test covers both. | `blankComments` removes HTML comments before headings parsed. Regression covers commented canonical headings and repeated unknown sections."
+      },
+      {
+        "id": "C3",
+        "text": "BUG-HUNT-REPORT.md and changes implementing the other four approved bug-hunt units are allowed batch artifacts, not out-of-scope violations; this unit remains responsible only for duplicate canonical section validation.",
+        "from": "004-fix-finding-3-from-bug-hunt-report-md-du",
+        "violated": false,
+        "checked": true,
+        "evidence": "Report and sibling bug-hunt artifacts explicitly allowed. Duplicate-section implementation, spec clarification and regression tests fit unit scope. | The other changed files belong to the sibling bug-hunt fixes, which C3 allows. | Core/spec/test changes implement duplicate validation. Guard, verify, gate, and related tests match other bug-hunt findings, explicitly allowed batch artifacts."
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": "[expectations] Read-only review used supplied check output as execution evidence. No expectation gaps found.\n[failures] Duplicate-section units keep the legacy last-section-only hash on purpose, and the test documents this. The lint blocks such units instead. I did not review the content of the sibling-unit changes in guard.mjs, verify.mjs and gate.mjs.\n[rules] SPEC clarification matches implementation."
+  },
+  "verdict": "pass"
+}

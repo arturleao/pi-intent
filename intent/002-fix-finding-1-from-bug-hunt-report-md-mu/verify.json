@@ -1,0 +1,170 @@
+{
+  "id": "002-fix-finding-1-from-bug-hunt-report-md-mu",
+  "title": "Prevent protected-field multi-edit bypass",
+  "attempt": 3,
+  "ts": "2026-10-01T15:42:50Z",
+  "summary": "Fixed predictor and protected draft gate. Implementation changes guard.mjs, gate.mjs, gate.test.mjs. Human revised C3 explicitly permits BUG-HUNT-REPORT.md without historical Git proof.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs: gate: original-file multi-edits cannot bypass protected status"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs: gate: unpredictable draft edits fail closed"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test",
+      "note": "105 tests passed."
+    }
+  ],
+  "files": [
+    "BUG-HUNT-REPORT.md",
+    "packages/iced-core/src/guard.mjs",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 9875,
+      "timedOut": false,
+      "tail": "...t throws or exits non-zero is reported, not fatal (532.7025ms)\n✔ collectRules qualifies inherited ids (1.7041ms)\n✔ verdict: pass with independent verifier (0.3923ms)\n✔ verdict: failures of every kind (0.4274ms)\n✔ verdict: ICED's own files flagged out of scope do not fail the unit (0.346ms)\n✔ verifier prompt says ICED's own files are never out of scope (0.389ms)\n✔ verdict: inherited constraint violation fails the child (0.2598ms)\n✔ verdict: manual unknown needs a human; no verifier needs a human (0.2219ms)\n✔ parseVerifierOutput takes the last JSON verdict block (0.2093ms)\n✔ verifier prompt carries contract, claims, inherited rules and answer format (0.218ms)\n✔ runCommands captures exit codes (228.0154ms)\n✔ verifyUnit writes evidence.md and verify.json (391.3209ms)\n✔ verifyUnit skips the verifier when evidence is missing (148.5292ms)\n✔ verifiers see the full check output and are told it is evidence; reports keep only the tail (663.5491ms)\nℹ tests 70\nℹ suites 0\nℹ pass 70\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 6294.3019\n\n> @arturleao/pi-intent@0.1.1 test\n> node --test \"test/*.test.mjs\"\n\n✔ classifyPath (2.0144ms)\n✔ isMutatingShell (1.7522ms)\n✔ verifier tools: read, grep, find and ls only; write, edit and every shell are blocked (0.5144ms)\n✔ the extension's verifier role uses the verifier tool rule for every tool call (0.621ms)\n✔ changedProtectedKeys (0.5965ms)\n✔ gate: no active unit leaves normal work alone but still protects ICED files (8.3542ms)\n✔ gate always: no active unit blocks code and mutating shell, allows reads and commits (1.3292ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (6.7462ms)\n✔ gate: original-file multi-edits cannot bypass protected status (6.8602ms)\n✔ gate: unpredictable draft edits fail closed (7.6053ms)\n✔ gate: building allows code, freezes the contract (8.3378ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (30.7349ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (12.7365ms)\n✔ no file targets another harness or the removed CLI (92.1344ms)\n✔ removed paths stay removed (74.4746ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.3315ms)\n✔ no package exposes a CLI (0.3436ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (776.6284ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (737.1191ms)\n✔ every module the extension imports is in the tarball or a declared dependency (752.4861ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3077ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.5492ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.6709ms)\n✔ models without thinking only toggle off and say so (0.6107ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1619ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.2455ms)\n✔ typing filters models but keeps actions and rotations (0.1958ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.3107ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1123ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.8621ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.1089ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (292.2924ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (975.8621ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (292.9837ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (341.8885ms)\nℹ tests 35\nℹ suites 0\nℹ pass 35\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2434.9104\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "expectations",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 36502
+    },
+    {
+      "name": "failures",
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 18216
+    },
+    {
+      "name": "rules",
+      "model": "openai-codex/gpt-5.6-terra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 41018
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": true,
+    "needsHuman": false,
+    "commandsOk": true,
+    "problems": [],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "Reported two-edit title/status bypass is blocked and predicted valid multi-edit content matches original-file semantics.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs: gate: original-file multi-edits cannot bypass protected status"
+          }
+        ],
+        "result": "pass",
+        "evidence": "Read guard.mjs and gate.test.mjs. Regression reproduces reported title/status edits, asserts exact original-file prediction in both edit orders, and asserts gate blocks. Named test passed. | predictFileContent resolves all edits against the original text, so the two-edit title/status bypass now produces the status change and the gate blocks it. The test 'gate: original-file multi-edits cannot bypass protected status' passes in the npm test output. I did not open the test body. | guard.mjs resolves every oldText against original content, rejects non-unique matches, sorts offsets, rejects overlaps, then applies replacements descending. gate.test.mjs regression proves reported title/status payload predicts original-file result in either edit order and draft gate blocks it. Supplied npm test output shows named test passed."
+      },
+      {
+        "id": "E2",
+        "text": "Missing or ambiguous or empty matches and overlapping edits cannot bypass draft-unit protection.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs: gate: unpredictable draft edits fail closed"
+          }
+        ],
+        "result": "pass",
+        "evidence": "Regression asserts null prediction and blocked draft edit for missing, ambiguous, empty, overlapping, duplicate matches and missing newText. Fixture confirms ambiguous matches. Named test passed. gate.mjs blocks null predictions with actionable reason. | Missing, ambiguous, empty and overlapping edits all return null. The gate blocks a null prediction for a draft unit. The test 'gate: unpredictable draft edits fail closed' passes. | guard.mjs returns null for absent, ambiguous, empty oldText, overlapping, duplicate, or malformed edits. gate.mjs blocks null prediction for draft units. gate.test.mjs covers missing, ambiguous, empty, overlapping, duplicate, and malformed edits; supplied output shows test passed."
+      },
+      {
+        "id": "E3",
+        "text": "Valid disjoint unprotected edits remain allowed and existing suite passes.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test",
+            "note": "105 tests passed."
+          }
+        ],
+        "result": "pass",
+        "evidence": "Regression asserts two disjoint unprotected edits remain allowed. Supplied npm test output confirms 105 passed, zero failures. | npm test exited 0 with 70 iced-core tests and 35 pi-intent tests passing. Valid disjoint edits still get a predicted result and are allowed when no protected key changes. | gate.test.mjs permits valid disjoint unprotected draft edits. Supplied npm test output exits 0: 70 iced-core tests and 35 pi-intent tests passed."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "Reported title/status multi-edit bypass is allowed.",
+        "from": "002-fix-finding-1-from-bug-hunt-report-md-mu",
+        "triggered": false,
+        "checked": true,
+        "evidence": "Reported bypass now predicts actual status change and gate blocks; passing regression confirms. | Edits are matched against the original content, so the sequential-application bypass is gone. | Reported payload now predicts status change from original content; changedProtectedKeys detects status; draft gate blocks."
+      },
+      {
+        "id": "F2",
+        "text": "Unpredictable edits to a draft unit are allowed without protected-field validation.",
+        "from": "002-fix-finding-1-from-bug-hunt-report-md-mu",
+        "triggered": false,
+        "checked": true,
+        "evidence": "Draft-unit gate rejects null prediction before protected-field comparison; regression covers invalid edit cases. | A null prediction on a draft unit returns a block. I found no allow path that skips protected-field validation, apart from the legacy-form risk noted above. | Unpredictable draft edit prediction is null and gate returns block with actionable reason."
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Keep public prediction return shape (content or null) and valid write behavior compatible.",
+        "from": "002-fix-finding-1-from-bug-hunt-report-md-mu",
+        "violated": false,
+        "checked": true,
+        "evidence": "Predictor still returns string or null. Full string writes return unchanged content; regression verifies full-write prediction. | predictFileContent still returns a string or null, and full writes (`content`) still work. | predictFileContent public return remains string or null. Full writes and valid exact replacements remain supported."
+      },
+      {
+        "id": "C2",
+        "text": "Match each edit against original file content; valid edits must be unique and non-overlapping.",
+        "from": "002-fix-finding-1-from-bug-hunt-report-md-mu",
+        "violated": false,
+        "checked": true,
+        "evidence": "Every match resolves against original content. Second occurrence search includes self-overlapping occurrences. Sorted ranges reject overlaps; descending-offset replacements preserve original positions and permit adjacency. | Each edit is matched against the original file. Edits must have a unique match and must not overlap. | Each edit locates uniquely in original text; overlapping ranges return null; replacement uses descending original offsets."
+      },
+      {
+        "id": "C3",
+        "text": "BUG-HUNT-REPORT.md is an allowed artifact of the requested bug hunt and is not an out-of-scope violation.",
+        "from": "002-fix-finding-1-from-bug-hunt-report-md-mu",
+        "violated": false,
+        "checked": true,
+        "evidence": "BUG-HUNT-REPORT.md is explicitly permitted artifact; remaining listed changes match implementation and regression scope. | BUG-HUNT-REPORT.md is explicitly allowed by C3. | BUG-HUNT-REPORT.md change explicitly allowed by constraint."
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": "[expectations] Read-only verification used source, tests, fixtures and supplied tooling output. No files changed. No expectation gaps found.\n[failures] Check whether the pi edit tool can deliver top-level oldText/newText to the gate (legacy form). If it can, predictContent should convert it to an edits array or return null, because the current code treats it as an empty edit list that changes nothing. Empty `edits: []` is also predicted as unchanged, which is probably harmless.\n[rules] No inherited constraints: parent is null. Changed implementation and test files fit edit prediction, draft gate, regression-test scope."
+  },
+  "verdict": "pass"
+}
