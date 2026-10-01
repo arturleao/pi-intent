@@ -18,7 +18,6 @@
     "parallel": true,
     "maxAttempts": 3,
     "independent": true,
-    "runner": "auto",
     "lenses": "auto",
     "model": {
       "pi": [
@@ -44,11 +43,5 @@
   "promotion": {
     "mode": "suggest",
     "window": 10
-  },
-  "targets": [
-    "agents",
-    "claude",
-    "codex",
-    "skills"
-  ]
+  }
 }

@@ -8,12 +8,15 @@ parent: null
 status: building
 autonomy: 1
 risk: medium
-attempts: 0
+attempts: 1
 created: 2026-10-01T11:59:25Z
-approved_at: 2026-10-01T12:02:13Z
+approved_at: 2026-10-01T12:28:44Z
 approved_by: Artur Leao
-contract_hash: 5d5fe0e72c0f4ec0a9a44c35f82f47156fdf96bd31396f499390c4eed15d05a6
+contract_hash: 063401c16a0b264deffd3d60b42fb53eb957da6fbf54b677bced2916cc3dbd2a
 base_ref: 4d53c01397587e4c6c3023b508b93d74d9128c3e
+blocked_from: null
+accepted_at: null
+accepted_by: null
 ---
 
 # Pi-only ICED as two npm packages (agnostic core + pi extension)
@@ -69,7 +72,7 @@ knows nothing about any coding agent, so the core can later serve other hosts wi
 - [E1] The core package has no reference to pi or any other agent (no host imports, no agent CLI names or spawns) and runs verification end to end with an injected fake agent. {verify: test | packages/iced-core/test (agnostic source scan + verifyUnit with injected runner)}
 - [E2] No file in the repo or packed tarballs targets Claude Code, Codex, Cursor, Copilot or Gemini, and bin/, action.yml, the CLI and the --prepare/--finish flow are gone. {verify: test | packages/*/test harness scan + check: git ls-files}
 - [E3] /iced init in an empty git repo creates only .iced/config.json, .iced/memory/, .iced/templates/, intent/README.md and the .gitignore/.gitattributes lines; re-running it is safe. {verify: test | packages/pi-intent or iced-core init test}
-- [E4] In pi, verifiers and the test writer run as pi subprocesses with read-only tools and the configured models and effort. {verify: test | packages/pi-intent/test (pi runner args)}
+- [E4] In pi, verifiers run as pi subprocesses with read-only tools, and the test writer runs as a pi subprocess allowed to write tests; both use the configured models and effort. {verify: test | packages/pi-intent/test/runner.test.mjs (pi runner args)}
 - [E5] Existing ICED repos keep working: spec examples and previously approved units lint clean with unchanged contract hashes, and old configs (per-runner model maps, runner, targets) load with the pi entries applied. {verify: test | packages/iced-core/test (compat)}
 - [E6] Every existing behavior still covered by the current test suite (lint, hashing, transitions, proposals, gate, models, picker, verification) passes after the move. {verify: check | npm test}
 - [E7] Both packages are publish-ready: `npm pack --dry-run` lists only intended files, metadata is complete (name, version, license, repository, exports/files, publishConfig), pi-intent depends on @arturleao/iced-core and declares pi packages as peers. {verify: check | npm pack --dry-run -w packages/iced-core -w packages/pi-intent}

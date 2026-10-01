@@ -16,3 +16,7 @@ Agent-owned, append-only log of significant choices. Audited, not approved.
 - Decision: package.json repository/homepage/bugs point at github.com/arturleao/pi-intent (the URL the old schema $id used); the schema $id became urn:iced:0.1:frontmatter so the core spec names no host. The core agnostic scan ignores repository/homepage/bugs fields (source location, not an agent reference).
 - Why: E7 needs complete metadata and no git remote exists to read the real URL; the old $id is the only URL in the codebase. Change it before publishing if the repo lives elsewhere.
 - Alternatives: Omit repository (fails E7); Ask the user now (blocks the build for a cosmetic value)
+
+## 2026-10-01T12:28:45Z (human)
+- Decision: Contract changed by the human after change-expectation escalation (applied the agent's proposal).
+- Why: E4 says verifiers AND the test writer run "with read-only tools". The verifier read it literally and failed E4. The test writer exists to write tests before the build (build.testWriter), so it needs write/edit; this matches the behavior before the refactor (it had write, edit). Verifiers stay strictly read-only (read, grep, find, ls, shell + the ICED_ROLE=verifier guard blocking write/edit and mutating shell). Proposal: reword E4 so only verifiers are read-only and the test writer may write tests.

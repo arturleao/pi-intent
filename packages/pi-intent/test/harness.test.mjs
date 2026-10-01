@@ -13,7 +13,8 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const HARNESS = /\b(claude|codex|copilot|gemini|opencode|aider|windsurf)\b|cursor-agent|AGENTS\.md|CLAUDE\.md|GEMINI\.md|iced\.mjs|\.iced[\\/](bin|lib)\b|--prepare|--finish|prepareSplit|finishSplit|action\.yml|GitHub Action|ICED_RUNNER|verify\.runner|\bRUNNERS\b/i;
 // Case-sensitive: the editor's name, or its config folder, but not a picker's `state.cursor`.
 const CURSOR = /\bCursor\b|(?<![\w$])\.cursor\b/;
-const SKIP = /^(intent|\.iced|node_modules)\//;
+// intent/<id>/ holds unit records (they describe the removal itself); intent/README.md is scanned.
+const SKIP = /^(intent\/[^/]+\/|\.iced\/|node_modules\/)/;
 
 function repoFiles() {
   const out = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { cwd: REPO, encoding: "utf8" });
@@ -42,6 +43,14 @@ test("removed paths stay removed", () => {
   for (const p of ["bin", "action.yml", "skills", "lib", ".claude", ".codex", ".agents", "AGENTS.md", "CLAUDE.md", ".iced/bin", ".iced/lib", ".iced/ICED.md"]) {
     assert.ok(!fs.existsSync(path.join(REPO, p)), `${p} exists`);
   }
+});
+
+test("this repo's ICED config has no harness targets or agent runner", () => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(REPO, ".iced", "config.json"), "utf8"));
+  assert.equal(cfg.targets, undefined, "targets");
+  assert.equal(cfg.verify?.runner, undefined, "verify.runner");
+  const model = cfg.verify?.model;
+  if (model && typeof model === "object" && !Array.isArray(model)) assert.deepEqual(Object.keys(model).filter((k) => !["pi", "default"].includes(k)), [], "per-tool model keys");
 });
 
 test("no package exposes a CLI", () => {
