@@ -1,18 +1,33 @@
+# Release on merge to main. Keep this file name: the npm trusted publishers point at publish.yml.
+#
+# Every push to main: test, derive the version from Conventional Commits since the last tag
+# (scripts/release.mjs auto), and when something is releasable commit `chore(release): vX.Y.Z`, tag it,
+# push both, publish iced-core then pi-intent, create the GitHub release and sync dev with main.
+# Pushes made with GITHUB_TOKEN do not trigger workflows, so the release commit does not loop.
+# Every step is idempotent: re-running publishes whatever version main carries that npm lacks.
 name: Publish
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write # create GitHub release
+  contents: write # release commit, tag, GitHub release, dev sync
   id-token: write # npm trusted publishing (OIDC) + provenance
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main # latest main, not the triggering sha, so re-runs see an earlier release commit
+          fetch-depth: 0 # full history and tags for the version bump
 
       - uses: actions/setup-node@v4
         with:
@@ -27,18 +42,20 @@ jobs:
 
       - run: npm test
 
-      - name: Verify tag matches both package versions
+      - name: Cut release commit and tag
+        id: release
         run: |
-          for dir in packages/iced-core packages/pi-intent; do
-            pkg="v$(node -p "require('./$dir/package.json').version")"
-            if [ "$pkg" != "$GITHUB_REF_NAME" ]; then
-              echo "::error::tag $GITHUB_REF_NAME != $dir/package.json $pkg"
-              exit 1
-            fi
-          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          node scripts/release.mjs auto --no-test
+
+      - name: Push release commit and tag
+        if: steps.release.outputs.released == 'true'
+        run: git push --atomic origin main "${{ steps.release.outputs.tag }}"
 
       # iced-core first: pi-intent depends on it.
       - name: Publish packages (skip versions already on npm)
+        id: publish
         run: |
           for dir in packages/iced-core packages/pi-intent; do
             name=$(node -p "require('./$dir/package.json').name")
@@ -49,7 +66,27 @@ jobs:
               npm publish -w "$dir" --provenance --access public
             fi
           done
+          echo "tag=v$(node -p "require('./packages/iced-core/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
+      - name: GitHub release (if missing)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.publish.outputs.tag }}
+        run: |
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::notice::no tag $TAG, skipping GitHub release"
+          elif gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::release $TAG exists"
+          else
+            gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
+          fi
+
+      - name: Sync dev with main
+        if: steps.release.outputs.released == 'true'
+        run: |
+          git ls-remote --exit-code --heads origin dev >/dev/null || { echo "::notice::no dev branch"; exit 0; }
+          git push origin main:dev && exit 0
+          git fetch origin dev
+          git checkout -B dev origin/dev
+          if git merge --no-edit -m "chore(release): merge ${{ steps.release.outputs.tag }} into dev" main && git push origin dev; then exit 0; fi
+          echo "::warning::could not sync dev with main; merge main into dev by hand"
