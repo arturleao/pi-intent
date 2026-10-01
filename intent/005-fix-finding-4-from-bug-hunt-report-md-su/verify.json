@@ -1,0 +1,165 @@
+{
+  "id": "005-fix-finding-4-from-bug-hunt-report-md-su",
+  "title": "Validate contracts before submission",
+  "attempt": 1,
+  "ts": "2026-10-01T16:05:51Z",
+  "summary": "Submission validates own and existing ancestor contracts before effects, returns unit-qualified invalid-contract errors, extension handles them before success reporting. Updated test fixtures with valid approval hashes and added eight invalid contract cases. C3 permits batch artifacts.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/iced-core/test/verify-parallel.test.mjs: submitUnit: invalid own and ancestor contracts stop before any work"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/iced-core/test/verify-parallel.test.mjs: submitUnit: invalid own and ancestor contracts stop before any work",
+      "note": "Tests changed/missing hash, duplicate sections, invalid fields for own and ancestor contracts, with check marker and agent spy."
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test",
+      "note": "113 tests passed; extension invalid outcome handling regression and valid/missing-evidence paths passed."
+    }
+  ],
+  "files": [
+    "BUG-HUNT-REPORT.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/iced-core/src/verify.mjs",
+    "packages/iced-core/test/core.test.mjs",
+    "packages/iced-core/test/models.test.mjs",
+    "packages/iced-core/test/verify-parallel.test.mjs",
+    "packages/iced-core/test/verify.test.mjs",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs",
+    "packages/pi-intent/test/runner.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 12191,
+      "timedOut": false,
+      "tail": "...rdict: duplicate own and inherited rule entries cannot hide violations (0.2717ms)\n✔ verdict: failures of every kind (0.3569ms)\n✔ verdict: ICED's own files flagged out of scope do not fail the unit (0.4896ms)\n✔ verifier prompt says ICED's own files are never out of scope (0.3487ms)\n✔ verdict: inherited constraint violation fails the child (0.1673ms)\n✔ verdict: manual unknown needs a human; no verifier needs a human (0.2976ms)\n✔ parseVerifierOutput takes the last JSON verdict block (0.4907ms)\n✔ verifier prompt carries contract, claims, inherited rules and answer format (0.2285ms)\n✔ runCommands captures exit codes (234.701ms)\n✔ verifyUnit writes evidence.md and verify.json (413.6967ms)\n✔ verifyUnit skips the verifier when evidence is missing (147.0698ms)\n✔ verifiers see the full check output and are told it is evidence; reports keep only the tail (609.5217ms)\nℹ tests 77\nℹ suites 0\nℹ pass 77\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 8449.6606\n\n> @arturleao/pi-intent@0.1.1 test\n> node --test \"test/*.test.mjs\"\n\n✔ classifyPath (2.113ms)\n✔ isMutatingShell (1.6693ms)\n✔ verifier tools: read, grep, find and ls only; write, edit and every shell are blocked (0.445ms)\n✔ the extension's verifier role uses the verifier tool rule for every tool call (0.4977ms)\n✔ extension: invalid submission reports errors before success report handling (0.3458ms)\n✔ changedProtectedKeys (0.4082ms)\n✔ gate: no active unit leaves normal work alone but still protects ICED files (10.3391ms)\n✔ gate always: no active unit blocks code and mutating shell, allows reads and commits (1.4675ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (6.2847ms)\n✔ gate: original-file multi-edits cannot bypass protected status (4.667ms)\n✔ gate: unpredictable draft edits fail closed (7.7686ms)\n✔ gate: building allows code, freezes the contract (7.6146ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (32.553ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (9.3729ms)\n✔ no file targets another harness or the removed CLI (84.753ms)\n✔ removed paths stay removed (69.4944ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.2944ms)\n✔ no package exposes a CLI (0.3804ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (771.5443ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (781.4216ms)\n✔ every module the extension imports is in the tarball or a declared dependency (868.1444ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3342ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.4972ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.6499ms)\n✔ models without thinking only toggle off and say so (0.181ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1409ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.27ms)\n✔ typing filters models but keeps actions and rotations (0.1765ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2243ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1066ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.7572ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.0982ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (264.8437ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (925.1115ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (271.8671ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (460.9177ms)\nℹ tests 36\nℹ suites 0\nℹ pass 36\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2557.4646\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": true,
+      "error": null,
+      "durationMs": 46403
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": true,
+    "needsHuman": false,
+    "commandsOk": true,
+    "problems": [],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "Own lint errors including missing or mismatched approval hash reject submission with actionable errors and unchanged status and attempts.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/verify-parallel.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/iced-core/test/verify-parallel.test.mjs: submitUnit: invalid own and ancestor contracts stop before any work"
+          }
+        ],
+        "result": "pass",
+        "evidence": "submitUnit validates before effects. Passing verify-parallel.test.mjs regression covers changed expectation, missing hash, duplicate sections and invalid fields; asserts unit-qualified errors, unchanged unit text and attempts."
+      },
+      {
+        "id": "E2",
+        "text": "Invalid existing ancestor contracts reject submission before any checks or agent calls.",
+        "kind": "test",
+        "ref": "packages/iced-core/test/verify-parallel.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/iced-core/test/verify-parallel.test.mjs: submitUnit: invalid own and ancestor contracts stop before any work",
+            "note": "Tests changed/missing hash, duplicate sections, invalid fields for own and ancestor contracts, with check marker and agent spy."
+          }
+        ],
+        "result": "pass",
+        "evidence": "submitUnit applies validate-stage lint to every returned ancestor. Passing regression repeats four invalid-contract cases against parent; asserts no check marker, agent calls, reports or metrics."
+      },
+      {
+        "id": "E3",
+        "text": "Extension handles invalid submission without claiming success, and valid/missing-evidence paths plus existing suite pass.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test",
+            "note": "113 tests passed; extension invalid outcome handling regression and valid/missing-evidence paths passed."
+          }
+        ],
+        "result": "pass",
+        "evidence": "Extension returns actionable invalid-contract diagnostics before report access or success handling. Read corresponding passing regression plus valid submission and missing-evidence tests. Supplied npm test output confirms 113 passes."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "Reported changed expectation reaches done through submission.",
+        "from": "005-fix-finding-4-from-bug-hunt-report-md-su",
+        "triggered": false,
+        "checked": true,
+        "evidence": "Changed expectation with stale approval hash returns invalid-contract before transition; regression confirms unchanged building unit."
+      },
+      {
+        "id": "F2",
+        "text": "Rejected invalid submission consumes an attempt or launches work.",
+        "from": "005-fix-finding-4-from-bug-hunt-report-md-su",
+        "triggered": false,
+        "checked": true,
+        "evidence": "All eight invalid-contract cases preserve attempts at 2 and launch neither configured check nor agent."
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Reject invalid submission before status changes, attempts, reports, checks, or agent calls.",
+        "from": "005-fix-finding-4-from-bug-hunt-report-md-su",
+        "violated": false,
+        "checked": true,
+        "evidence": "Validation precedes attempt calculation, transition and verifyUnit. Regression confirms unchanged text, absent reports and empty metrics."
+      },
+      {
+        "id": "C2",
+        "text": "Preserve valid submission and missing-evidence behavior.",
+        "from": "005-fix-finding-4-from-bug-hunt-report-md-su",
+        "violated": false,
+        "checked": true,
+        "evidence": "Passing tests demonstrate valid submissions reaching done or accepted and missing evidence returning missing-evidence without transition."
+      },
+      {
+        "id": "C3",
+        "text": "BUG-HUNT-REPORT.md and changes implementing the other four approved bug-hunt units are allowed batch artifacts, not out-of-scope violations; this unit remains responsible only for submission validation.",
+        "from": "005-fix-finding-4-from-bug-hunt-report-md-su",
+        "violated": false,
+        "checked": true,
+        "evidence": "Other bug-hunt fixes and BUG-HUNT-REPORT.md are permitted batch artifacts; submission change remains confined to validation, diagnostics and regression coverage."
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": "Used supplied tooling results and read implementation/tests. Extension regression checks source structure; inspected branch confirms early diagnostic return. Ancestors retain existing validate-stage lifecycle policy."
+  },
+  "verdict": "pass"
+}

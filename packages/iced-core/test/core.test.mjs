@@ -69,6 +69,37 @@ test("lint: draft template passes draft stage, fails signoff with the right code
   assert.deepEqual(codes(core.lintIced(p, "signoff", tpl).errors), ["expectations-missing", "failures-missing", "goal-missing"]);
 });
 
+test("lint: duplicate canonical sections fail every lint stage case-insensitively", () => {
+  for (const heading of ["Intent", "Context", "Expectations", "Open questions"]) {
+    const text = unitText({}, `${FILLED_BODY}\n## ${heading.toUpperCase()}\n`);
+    for (const stage of ["draft", "signoff", "validate", "accept"]) {
+      assert.ok(codes(core.lintIced(core.parseIced(text), stage, text).errors).includes("section-duplicate"), `${heading}: ${stage}`);
+    }
+  }
+  const valid = unitText({}, `${FILLED_BODY}\n<!--\n## Intent\n## EXPECTATIONS\n-->\n## Notes\nOne\n## Notes\nTwo\n`);
+  assert.deepEqual(core.lintIced(core.parseIced(valid), "signoff", valid).errors, []);
+  assert.equal(core.contractHash(valid), core.contractHash(unitText()));
+});
+
+test("repo ops: duplicate contract sections block approval and acceptance", (t) => {
+  const root = tempRepo();
+  t.after(() => cleanup(root));
+  const id = "001-dark-mode";
+  const body = `${FILLED_BODY}\n## Intent\n### Goal\nLast goal\n## Expectations\n- [E3] Last expectation {verify: check | test}\n`;
+  const text = unitText({}, body);
+  writeUnit(root, id, text);
+  const approval = core.approveUnit(root, id, { by: "test" });
+  assert.equal(approval.ok, false);
+  assert.ok(codes(approval.lint.errors).includes("section-duplicate"));
+  const changed = text.replace("Toggle switches theme without reload.", "Changed expectation.");
+  assert.equal(core.contractHash(text), core.contractHash(changed), "legacy hash behavior retained for invalid duplicate sections");
+  writeUnit(root, id, core.setFrontmatter(changed, { status: "done", contract_hash: core.contractHash(text) }));
+  fs.writeFileSync(core.unitPaths(root, id).evidence, "# Evidence\n");
+  const acceptance = core.acceptUnit(root, id, { by: "test" });
+  assert.equal(acceptance.ok, false);
+  assert.ok(codes(acceptance.lint.errors).includes("section-duplicate"));
+});
+
 test("lint: signoff rules on a filled unit", () => {
   const ok = core.parseIced(unitText());
   const r = core.lintIced(ok, "signoff");

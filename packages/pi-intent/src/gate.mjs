@@ -59,7 +59,7 @@ export function gateDecision({ root, cwd, toolName, input, autonomy = 1, always 
           return { action: "block", reason: `${target.id} is ${st}: Intent and Expectations are frozen after sign-off. If an expectation must change, call iced_escalate with kind "change-expectation".` };
         }
         const next = predictContent(toolName, input, target.abs);
-        if (next === null) return allow;
+        if (next === null) return { action: "block", reason: `Cannot validate protected fields in ${target.rel}; use unique, non-empty, non-overlapping original-text edits or write the complete draft.` };
         const changed = changedProtectedKeys(unit.text, next);
         if (changed.length) {
           return { action: "block", reason: `Do not change ${changed.join(", ")} in ${target.rel}; those fields are owned by the human and the ICED tooling. Sign-off happens through iced_request_signoff.` };

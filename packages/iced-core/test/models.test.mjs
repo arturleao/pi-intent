@@ -78,7 +78,8 @@ test("submitUnit passes model and effort to the agent: pinned effort beats the s
   const seen = [];
   const answer = "```json\n" + JSON.stringify({ verdict: "pass", expectations: [{ id: "E1", result: "pass" }, { id: "E2", result: "pass" }] }) + "\n```";
   const agent = async (job) => { seen.push({ role: job.role, access: job.access, model: job.model, effort: job.effort }); return { ok: true, text: answer }; };
-  writeUnit(root, "001-dark-mode", unitText({ status: "building", tier: "S" }));
+  const text = unitText({ status: "building", tier: "S" });
+  writeUnit(root, "001-dark-mode", core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
   const res = await submitUnit({ root, id: "001-dark-mode", evidence, agent, host: "host-a", defaultModel: "s/m", defaultEffort: "low" });
   assert.equal(res.outcome, "done");
   assert.deepEqual(seen, [{ role: "verifier", access: "read-only", model: "s/m", effort: "high" }]);

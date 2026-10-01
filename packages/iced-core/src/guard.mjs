@@ -44,14 +44,19 @@ export function classifyPath(root, cwd, rawPath) {
 export function predictFileContent(abs, change) {
   if (typeof change?.content === "string") return change.content;
   if (!Array.isArray(change?.edits)) return null;
-  let next;
-  try { next = fs.readFileSync(abs, "utf8"); } catch { return null; }
+  let original;
+  try { original = fs.readFileSync(abs, "utf8"); } catch { return null; }
+  const matches = [];
   for (const e of change.edits) {
-    if (typeof e?.oldText !== "string") return null;
-    const idx = next.indexOf(e.oldText);
-    if (idx < 0) return null;
-    next = next.slice(0, idx) + String(e.newText ?? "") + next.slice(idx + e.oldText.length);
+    if (typeof e?.oldText !== "string" || !e.oldText || typeof e.newText !== "string") return null;
+    const start = original.indexOf(e.oldText);
+    if (start < 0 || original.indexOf(e.oldText, start + 1) >= 0) return null;
+    matches.push({ start, end: start + e.oldText.length, text: e.newText });
   }
+  matches.sort((a, b) => a.start - b.start);
+  for (let i = 1; i < matches.length; i++) if (matches[i].start < matches[i - 1].end) return null;
+  let next = original;
+  for (const m of matches.reverse()) next = next.slice(0, m.start) + m.text + next.slice(m.end);
   return next;
 }
 

@@ -27,7 +27,8 @@ const sleep = (ms) => `node -e "setTimeout(() => {}, ${ms})"`;
 
 function repoWithUnit(fm = {}, verify = {}) {
   const root = tempRepo({ git: true, config: { verify: { commands: [], ...verify } } });
-  writeUnit(root, "001-dark-mode", unitText({ status: "building", ...fm }));
+  const text = unitText({ status: "building", ...fm });
+  writeUnit(root, "001-dark-mode", core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
   return root;
 }
 
@@ -77,6 +78,39 @@ test("mergeVerifierReports: any failure wins, pass beats unknown", () => {
   assert.equal(mergeVerifierReports([]), null);
 });
 
+test("mergeVerifierReports: explicit rule checks outrank malformed checks, violations win", () => {
+  const reports = [
+    { verdict: "pass", constraints: [{ id: "C1", violated: "false" }], failures: [{ id: "F1" }] },
+    { verdict: "pass", constraints: [{ id: "C1", violated: false }], failures: [{ id: "F1", triggered: false }] },
+  ];
+  for (const list of [reports, [...reports].reverse()]) {
+    const merged = mergeVerifierReports(list);
+    assert.equal(merged.constraints[0].violated, false);
+    assert.equal(merged.failures[0].triggered, false);
+  }
+  const violation = { verdict: "fail", constraints: [{ id: "C1", violated: true }], failures: [{ id: "F1", triggered: true }] };
+  const singleton = { verdict: "pass", constraints: reports.flatMap((r) => r.constraints).concat(violation.constraints), failures: reports.flatMap((r) => r.failures).concat(violation.failures) };
+  for (const list of [[violation, ...reports], [...reports, violation], [singleton]]) {
+    const merged = mergeVerifierReports(list);
+    assert.equal(merged.constraints[0].violated, true);
+    assert.equal(merged.failures[0].triggered, true);
+  }
+});
+
+test("submitUnit: incomplete rule coverage cannot auto-accept, complete coverage can", async (t) => {
+  for (const complete of [false, true]) {
+    const root = repoWithUnit({ autonomy: 2, risk: "low" }, { lenses: "single" });
+    t.after(() => cleanup(root));
+    const u = core.readUnit(root, "001-dark-mode");
+    core.updateFrontmatter(root, u.id, { contract_hash: core.contractHash(u.text) });
+    const report = { verdict: "pass", expectations: [{ id: "E1", result: "pass" }, { id: "E2", result: "pass" }],
+      ...(complete ? { constraints: [{ id: "C1", violated: false }, { id: "C2", violated: false }], failures: [{ id: "F1", triggered: false }] } : {}) };
+    const res = await submitUnit({ root, id: u.id, evidence, agent: async () => ({ ok: true, text: `\`\`\`json\n${JSON.stringify(report)}\n\`\`\`` }) });
+    assert.equal(res.outcome, complete ? "accepted" : "done");
+    assert.equal(res.report.result.needsHuman, !complete);
+  }
+});
+
 test("submitUnit: three verifiers run in parallel and a pass moves the unit to done", async (t) => {
   const root = repoWithUnit({ tier: "M" });
   const log = path.join(os.tmpdir(), `iced-fake-${process.pid}-${Date.now()}.log`);
@@ -118,6 +152,43 @@ test("submitUnit: missing evidence and wrong status", async (t) => {
   assert.equal(core.readUnit(root, "001-dark-mode").parsed.frontmatter.status, "building");
   writeUnit(root, "002-other", unitText({ id: "002-other", status: "draft" }));
   await assert.rejects(submitUnit({ root, id: "002-other", evidence }), /only a building unit/);
+});
+
+test("submitUnit: invalid own and ancestor contracts stop before any work", async (t) => {
+  for (const target of ["own", "ancestor"]) {
+    for (const invalid of ["changed", "missing-hash", "duplicate", "invalid-field"]) {
+      const root = repoWithUnit({ attempts: 2 }, { commands: ['node -e "require(\'fs\').writeFileSync(\'check-ran\',\'yes\')"'] });
+      t.after(() => cleanup(root));
+      const id = "001-dark-mode";
+      let unit = core.readUnit(root, id);
+      let badId = id;
+      if (target === "ancestor") {
+        badId = "002-parent";
+        const text = unitText({ id: badId, status: "approved", type: "project" });
+        writeUnit(root, badId, core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
+        core.updateFrontmatter(root, id, { parent: badId });
+        unit = core.readUnit(root, badId);
+      }
+      let bad = unit.text;
+      if (invalid === "changed") bad = bad.replace("Toggle switches theme without reload.", "Changed expectation.");
+      if (invalid === "missing-hash") bad = core.setFrontmatter(bad, { contract_hash: null });
+      if (invalid === "duplicate") bad += "\n## Expectations\n";
+      if (invalid === "invalid-field") bad = core.setFrontmatter(bad, { risk: "invalid" });
+      core.writeUnitText(root, badId, bad);
+      const before = core.readUnit(root, id).text;
+      let called = false;
+      const res = await submitUnit({ root, id, evidence, agent: async () => { called = true; throw new Error("should not run"); } });
+      assert.equal(res.outcome, "invalid-contract", `${target}: ${invalid}`);
+      assert.ok(res.errors.some((e) => e.unit === badId && e.message));
+      assert.equal(called, false);
+      assert.equal(fs.existsSync(path.join(root, "check-ran")), false);
+      assert.equal(core.readUnit(root, id).text, before);
+      assert.equal(core.readUnit(root, id).parsed.frontmatter.attempts, 2);
+      assert.equal(fs.existsSync(core.unitPaths(root, id).verify), false);
+      assert.equal(fs.existsSync(core.unitPaths(root, id).evidence), false);
+      assert.deepEqual(core.readMetrics(root), []);
+    }
+  }
 });
 
 test("submitUnit without an agent: no independent verification, a human must review", async (t) => {

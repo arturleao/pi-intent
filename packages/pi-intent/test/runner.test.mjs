@@ -98,7 +98,8 @@ test("iced-core submitUnit through piAgent: parallel pi verifiers with the sessi
   const root = tempRepo({ verify: { commands: [], effort: "high" } });
   t.after(() => cleanup(root));
   fs.mkdirSync(path.join(root, "intent", "001-dark-mode"), { recursive: true });
-  fs.writeFileSync(path.join(root, "intent", "001-dark-mode", "iced.md"), UNIT.replace("tier: S", "tier: M"));
+  const text = UNIT.replace("tier: S", "tier: M");
+  fs.writeFileSync(path.join(root, "intent", "001-dark-mode", "iced.md"), core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
   const calls = [];
   const invocation = (args) => {
     calls.push(args);
@@ -142,7 +143,8 @@ test("[E5] configs written by older versions (per-host maps, runner, targets) lo
   assert.equal(core.verifyEffort(cfg, "pi"), "low");
   assert.match(core.describeModels(cfg, { host: "pi" }), /a\/b \(effort high\), c\/d \(effort low\), rotated across verifiers/);
   fs.mkdirSync(path.join(root, "intent", "001-dark-mode"), { recursive: true });
-  fs.writeFileSync(path.join(root, "intent", "001-dark-mode", "iced.md"), UNIT.replace("tier: S", "tier: M"));
+  const text = UNIT.replace("tier: S", "tier: M");
+  fs.writeFileSync(path.join(root, "intent", "001-dark-mode", "iced.md"), core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
   const seen = [];
   const answer = "```json\n" + JSON.stringify({ verdict: "pass", expectations: [{ id: "E1", result: "pass" }, { id: "E2", result: "pass" }] }) + "\n```";
   const agent = async (job) => { seen.push(`${job.model}:${job.effort}`); return { ok: true, text: answer }; };

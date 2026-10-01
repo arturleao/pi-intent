@@ -98,7 +98,9 @@ control, personal data or production data, or is hard to undo.
 
 ### 4.2 Body sections
 
-Sections are identified by heading text, case-insensitive. Other sections MAY exist and MUST be preserved.
+Sections are identified by heading text, case-insensitive. Canonical level-two sections (`Intent`, `Context`,
+`Expectations`, `Open questions`) MUST NOT repeat; validators MUST report duplicates at every lint stage.
+Other sections MAY exist and MUST be preserved.
 
 ```text
 # <title>
