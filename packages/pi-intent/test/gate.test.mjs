@@ -6,6 +6,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { VERIFIER_TOOLS, changedProtectedKeys, classifyPath, gateDecision, isMutatingShell, verifierToolDecision } from "../src/gate.mjs";
 import { TOOLS } from "../src/runner.mjs";
+import { predictFileContent } from "@arturleao/iced-core/guard";
 import { cleanup, tempRepo, unitText, writeUnit } from "../../iced-core/test/helpers.mjs";
 
 test("classifyPath", (t) => {
@@ -115,6 +116,45 @@ test("gate: draft allows drafting the unit but not protected keys or code", (t) 
   assert.equal(decide("write", { path: `intent/${id}/evidence.md`, content: "" }).action, "block");
   assert.equal(decide("write", { path: "intent/009-new/iced.md", content: "" }).action, "block");
   assert.equal(decide("powershell", { command: "Remove-Item src/a.ts" }).action, "block");
+});
+
+test("gate: original-file multi-edits cannot bypass protected status", (t) => {
+  const { root, id, decide } = setup("draft");
+  t.after(() => cleanup(root));
+  const unitPath = `intent/${id}/iced.md`;
+  const abs = path.join(root, unitPath);
+  const original = fs.readFileSync(abs, "utf8");
+  const edits = [
+    { oldText: "title: Dark mode", newText: "title: status: draft" },
+    { oldText: "status: draft", newText: "status: building" },
+  ];
+  const expected = original.replace("status: draft", "status: building").replace("title: Dark mode", "title: status: draft");
+  assert.equal(predictFileContent(abs, { edits }), expected);
+  assert.equal(predictFileContent(abs, { edits: [...edits].reverse() }), expected);
+  assert.equal(decide("edit", { path: unitPath, edits }).action, "block");
+  const valid = [
+    { oldText: "No new runtime dependencies.", newText: "Keep dependencies." },
+    { oldText: "Light theme unchanged.", newText: "Keep light theme." },
+  ];
+  assert.equal(decide("edit", { path: unitPath, edits: valid }).action, "allow");
+  assert.equal(predictFileContent(abs, { content: original }), original);
+});
+
+test("gate: unpredictable draft edits fail closed", (t) => {
+  const { root, id, decide } = setup("draft");
+  t.after(() => cleanup(root));
+  const unitPath = `intent/${id}/iced.md`;
+  for (const edits of [
+    [{ oldText: "not present", newText: "x" }],
+    [{ oldText: "theme", newText: "x" }],
+    [{ oldText: "", newText: "x" }],
+    [{ oldText: "status: draft", newText: "x" }, { oldText: "draft", newText: "y" }],
+    [{ oldText: "status: draft", newText: "x" }, { oldText: "status: draft", newText: "y" }],
+    [{ oldText: "status: draft" }],
+  ]) {
+    assert.equal(predictFileContent(path.join(root, unitPath), { edits }), null);
+    assert.equal(decide("edit", { path: unitPath, edits }).action, "block");
+  }
 });
 
 test("gate: building allows code, freezes the contract", (t) => {
