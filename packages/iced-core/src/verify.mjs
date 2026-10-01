@@ -14,6 +14,7 @@ const TAIL = 4000;
 /** How much check output verifiers see: they may have no way to run commands, so this is their evidence. */
 const PROMPT_OUTPUT = 30000;
 const tail = (s, n = TAIL) => (s.length > n ? `...${s.slice(-n)}` : s);
+const throwIfCancelled = (signal) => { if (signal?.aborted) throw new Error("Verification cancelled."); };
 
 function killTree(child) {
   if (!child.pid) return;
@@ -30,6 +31,11 @@ export function runProcess(command, args, { cwd, env, timeoutSec = 900, signal, 
     const started = Date.now();
     let out = "";
     let timedOut = false;
+    let cancelled = Boolean(signal?.aborted);
+    if (cancelled) {
+      resolve({ exitCode: -1, output: "Process cancelled before launch.", stdout: "", durationMs: 0, timedOut: false, cancelled: true });
+      return;
+    }
     let child;
     try {
       child = spawn(command, args, {
@@ -45,13 +51,14 @@ export function runProcess(command, args, { cwd, env, timeoutSec = 900, signal, 
     child.stderr.on("data", (d) => { out += d.toString(); });
     if (input != null) { child.stdin.write(input); child.stdin.end(); }
     const timer = setTimeout(() => { timedOut = true; killTree(child); }, Math.max(1, timeoutSec) * 1000);
-    const onAbort = () => killTree(child);
+    const onAbort = () => { cancelled = true; killTree(child); };
     signal?.addEventListener?.("abort", onAbort, { once: true });
+    if (signal?.aborted) onAbort();
     child.on("error", (error) => { out += `\n${error.message}`; });
     child.on("close", (code) => {
       clearTimeout(timer);
       signal?.removeEventListener?.("abort", onAbort);
-      resolve({ exitCode: timedOut ? -1 : (code ?? -1), output: out, stdout, durationMs: Date.now() - started, timedOut });
+      resolve({ exitCode: timedOut || cancelled ? -1 : (code ?? -1), output: out, stdout, durationMs: Date.now() - started, timedOut, cancelled });
     });
   });
 }
@@ -68,13 +75,17 @@ export function commandGroups(commands, parallel = true) {
 }
 
 export async function runCommands(root, commands, { timeoutSec, signal, onProgress, parallel = true } = {}) {
+  throwIfCancelled(signal);
   const runGroup = async (group) => {
     const results = [];
     let failed = false;
     for (const command of group) {
+      throwIfCancelled(signal);
       if (failed) { results.push({ command, exitCode: null, skipped: true, durationMs: 0, timedOut: false, tail: "skipped: an earlier step in this group failed" }); continue; }
       onProgress?.(`Running ${command}`);
+      throwIfCancelled(signal);
       const r = await runProcess(command, [], { cwd: root, shell: true, timeoutSec, signal });
+      throwIfCancelled(signal);
       results.push({ command, exitCode: r.exitCode, durationMs: r.durationMs, timedOut: r.timedOut, tail: tail(r.output), output: tail(r.output, PROMPT_OUTPUT) });
       failed = r.exitCode !== 0;
     }
@@ -396,6 +407,7 @@ export function computeVerdict({ unit, ancestorUnits = [], evidence = [], comman
 
 /** Ask one independent verifier (through the host's agent) and parse its verdict. */
 export async function runVerifier({ root, prompt, config, signal, agent, model, effort, host = null }) {
+  throwIfCancelled(signal);
   if (typeof agent !== "function") return { verifier: null, error: "no agent available to run the verifier", raw: "" };
   const set = model === undefined ? lensSetting(config, 0, host) : { model, effort: effort ?? null };
   let r;
@@ -405,8 +417,10 @@ export async function runVerifier({ root, prompt, config, signal, agent, model, 
       timeoutSec: config.verify?.timeoutSec ?? 900, signal,
     });
   } catch (error) {
+    throwIfCancelled(signal);
     return { verifier: null, error: `verifier could not start: ${error?.message ?? error}`, raw: "" };
   }
+  throwIfCancelled(signal);
   const oneLine = (s) => String(s).replace(/[\s\u2022\u26a0]+/g, " ").trim();
   if (!r?.ok) return { verifier: null, error: r?.timedOut ? "verifier timed out" : `verifier exited ${r?.exitCode ?? "?"}: ${oneLine(tail(String(r?.output ?? r?.text ?? ""), 400))}`, raw: r?.output ?? "" };
   const verifier = parseVerifierOutput(r.text);
@@ -432,6 +446,7 @@ export function buildTestWriterPrompt({ unit, ancestorUnits = [] }) {
 
 /** Run the isolated test writer through the host's agent. Never rejects. */
 export async function runTestWriter({ root, unit, ancestorUnits, config, signal, agent, defaultModel = null, defaultEffort = null }) {
+  if (signal?.aborted) return { ok: false, text: "", output: "Test writer cancelled before launch." };
   if (typeof agent !== "function") return { ok: false, text: "", output: "no agent available to run the test writer" };
   const s = splitEffort(config.build?.testWriterModel || defaultModel);
   try {
@@ -439,6 +454,7 @@ export async function runTestWriter({ root, unit, ancestorUnits, config, signal,
       root, prompt: buildTestWriterPrompt({ unit, ancestorUnits }), role: "test-writer", access: "write", model: s.model,
       effort: s.effort ?? config.build?.testWriterEffort ?? defaultEffort ?? null, timeoutSec: config.verify?.timeoutSec ?? 900, signal,
     });
+    if (signal?.aborted) return { ok: false, text: "", output: "Test writer cancelled." };
     return { ok: Boolean(r?.ok), text: String(r?.text ?? ""), output: String(r?.output ?? r?.text ?? "") };
   } catch (error) {
     return { ok: false, text: "", output: String(error?.message ?? error) };
@@ -505,6 +521,7 @@ export async function prepareVerification({ root, unit, ancestorUnits = [], conf
   const commandResults = await runCommands(root, config.verify?.commands ?? [], {
     timeoutSec: config.verify?.timeoutSec ?? 900, signal, onProgress, parallel: config.verify?.parallel !== false,
   });
+  throwIfCancelled(signal);
   const files = changedFiles(root, unit.parsed.frontmatter.base_ref);
   const independent = config.verify?.independent !== false;
   const lenses = [];
@@ -554,12 +571,15 @@ export async function verifyUnit({ root, unit, ancestorUnits = [], config, summa
         ? `${prep.lenses.length} independent verifiers are checking the work in parallel (${prep.lenses.map((l) => l.name).join(", ")})`
         : "Independent verifier is checking the work");
       lensResults = await Promise.all(prep.lenses.map(async (l) => {
+        throwIfCancelled(signal);
         const started = Date.now();
         const out = await runVerifierImpl({ root, prompt: l.prompt, config, signal, agent, host, model: l.model, effort: l.effort, lens: l.name });
+        throwIfCancelled(signal);
         return { name: l.name, model: l.model, effort: l.effort, verifier: out?.verifier ?? null, error: out?.error ?? null, durationMs: Date.now() - started };
       }));
     }
   }
+  throwIfCancelled(signal);
   return finishVerification({ root, unit, ancestorUnits, summary, evidence, attempt, ...prep, lensResults, host });
 }
 
@@ -588,6 +608,7 @@ export function applyVerdict(root, id, report, config, attempt) {
 
 /** Submit a building unit: verify it and apply the verdict. */
 export async function submitUnit({ root, id, summary = "", evidence = [], signal, onProgress, agent, host = null, runVerifierImpl, defaultModel = null, defaultEffort = null }) {
+  throwIfCancelled(signal);
   const unit = readUnit(root, id);
   const fm = unit.parsed.frontmatter;
   if (fm.status !== "building") throw new Error(`${id} is ${fm.status}; only a building unit can be submitted.`);

@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import path from "node:path";
+import { getEventListeners } from "node:events";
 import * as core from "../src/core.mjs";
 import {
-  buildVerifierPrompt, collectRules, computeVerdict, parseVerifierOutput, runCommands, verifyUnit,
+  buildVerifierPrompt, collectRules, computeVerdict, parseVerifierOutput, runCommands, runProcess, runVerifier, runTestWriter, submitUnit, verifyUnit,
 } from "../src/verify.mjs";
 import { cleanup, tempRepo, unitText, writeUnit } from "./helpers.mjs";
 
@@ -129,6 +131,87 @@ test("parseVerifierOutput takes the last JSON verdict block", () => {
 test("verifier prompt carries contract, claims, inherited rules and answer format", () => {
   const p = buildVerifierPrompt({ unit: unitOf(), ancestorUnits: [parent()], summary: "did it", evidence: [evidence[0]], commandResults: [], files: ["src/a.ts"], rubric: "RUBRIC" });
   for (const s of ["try to prove that it is NOT done", "[E2] NO EVIDENCE SUBMITTED", "000-program:C1", "src/a.ts", "RUBRIC", '"verdict"']) assert.ok(p.includes(s), s);
+});
+
+test("runProcess: pre-aborted and mid-process cancellation prevent successful execution and clean listeners", async (t) => {
+  const root = tempRepo();
+  t.after(() => cleanup(root));
+  const pre = new AbortController();
+  pre.abort();
+  const marker = path.join(root, "executed");
+  const r = await runProcess(process.execPath, ["-e", "require('fs').writeFileSync('executed','yes')"], { cwd: root, signal: pre.signal });
+  assert.equal(r.cancelled, true);
+  assert.equal(r.exitCode, -1);
+  assert.equal(fs.existsSync(marker), false);
+  assert.equal(getEventListeners(pre.signal, "abort").length, 0);
+  const mid = new AbortController();
+  const running = runProcess(process.execPath, ["-e", "require('fs').writeFileSync('ready','yes');setTimeout(()=>{},30000)"], { cwd: root, signal: mid.signal, timeoutSec: 60 });
+  const deadline = Date.now() + 5000;
+  while (!fs.existsSync(path.join(root, "ready")) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.ok(fs.existsSync(path.join(root, "ready")), "child started before cancellation");
+  const started = Date.now();
+  mid.abort();
+  const stopped = await running;
+  assert.equal(stopped.cancelled, true);
+  assert.equal(stopped.exitCode, -1);
+  assert.equal(stopped.timedOut, false);
+  assert.ok(Date.now() - started < 5000, "abort returns promptly");
+  assert.equal(getEventListeners(mid.signal, "abort").length, 0);
+  const normal = new AbortController();
+  assert.equal((await runProcess(process.execPath, ["-e", "process.exit(0)"], { signal: normal.signal })).exitCode, 0);
+  assert.equal(getEventListeners(normal.signal, "abort").length, 0);
+  const timeout = await runProcess(process.execPath, ["-e", "setTimeout(()=>{},30000)"], { timeoutSec: 1 });
+  assert.equal(timeout.timedOut, true);
+  assert.equal(timeout.cancelled, false);
+  assert.equal(timeout.exitCode, -1);
+});
+
+test("cancellation: sequential checks and verifier/test-writer calls stop before new launches", async (t) => {
+  const root = tempRepo();
+  t.after(() => cleanup(root));
+  const controller = new AbortController();
+  let progress = 0;
+  await assert.rejects(runCommands(root, [
+    'node -e "require(\'fs\').writeFileSync(\'first\',\'yes\')"',
+    'node -e "require(\'fs\').writeFileSync(\'second\',\'yes\')"',
+  ], { parallel: false, signal: controller.signal, onProgress: () => { if (++progress === 2) controller.abort(); } }), /cancelled/);
+  assert.equal(fs.existsSync(path.join(root, "first")), true);
+  assert.equal(fs.existsSync(path.join(root, "second")), false);
+  let calls = 0;
+  const agent = async () => { calls++; return { ok: true, text: "" }; };
+  const config = core.defaultConfig();
+  await assert.rejects(runVerifier({ root, prompt: "", config, signal: controller.signal, agent }), /cancelled/);
+  assert.equal((await runTestWriter({ root, unit: unitOf(), config, signal: controller.signal, agent })).ok, false);
+  assert.equal(calls, 0);
+  writeUnit(root, "001-dark-mode", unitText({ status: "verifying" }));
+  const beforeVerifier = new AbortController();
+  await assert.rejects(verifyUnit({ root, unit: core.readUnit(root, "001-dark-mode"), config, evidence, signal: beforeVerifier.signal,
+    onProgress: () => beforeVerifier.abort(), agent }), /cancelled/);
+  assert.equal(calls, 0);
+  assert.equal(fs.existsSync(core.unitPaths(root, "001-dark-mode").verify), false);
+});
+
+test("submitUnit: cancellation preserves building and attempts without reports", async (t) => {
+  for (const stage of ["before", "checks", "verifier"]) {
+    const root = tempRepo({ config: { verify: { commands: stage === "checks" ? ['node -e "console.log(1)"'] : [], lenses: "single" } } });
+    t.after(() => cleanup(root));
+    const text = unitText({ status: "building", autonomy: 2, attempts: 1 });
+    writeUnit(root, "001-dark-mode", core.setFrontmatter(text, { contract_hash: core.contractHash(text) }));
+    const controller = new AbortController();
+    if (stage === "before") controller.abort();
+    let calls = 0;
+    await assert.rejects(submitUnit({ root, id: "001-dark-mode", evidence, signal: controller.signal,
+      onProgress: () => { if (stage === "checks") controller.abort(); },
+      agent: async () => { calls++; controller.abort(); return { ok: true, text: `\`\`\`json\n${JSON.stringify(passing)}\n\`\`\`` }; },
+    }), /cancelled/);
+    const fm = core.readUnit(root, "001-dark-mode").parsed.frontmatter;
+    assert.equal(fm.status, "building");
+    assert.equal(fm.attempts, 1);
+    assert.equal(calls, stage === "verifier" ? 1 : 0);
+    assert.equal(fs.existsSync(core.unitPaths(root, "001-dark-mode").verify), false);
+    assert.equal(fs.existsSync(core.unitPaths(root, "001-dark-mode").evidence), false);
+    assert.deepEqual(core.readMetrics(root), []);
+  }
 });
 
 test("runCommands captures exit codes", async (t) => {
