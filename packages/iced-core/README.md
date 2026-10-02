@@ -53,15 +53,22 @@ const res = await submitUnit({
 
 ## Guarding changes
 
-A host that can intercept file writes and shell commands uses `guard` to keep agents inside the rules: no code
-changes unless the active unit is `building`, the unit file editable only while `draft` and never its protected
-fields, ICED-owned files (`evidence.md`, `verify.json`, `.iced/config.json`, `.iced/active`, `.iced/metrics.jsonl`)
-written only by the tooling.
+A host that can intercept file writes and shell commands uses `guard` to keep agents inside the rules: code
+changes inside the repository frozen while the active unit is not `building` (at low autonomy), the unit file's
+protected fields and signed-off contract never edited by agents, ICED-owned files (`evidence.md`, `verify.json`,
+`.iced/active`, `.iced/metrics.jsonl`) written only by the tooling, and the config's integrity keys
+(`CONFIG_INTEGRITY_KEYS`) human-only.
 
 ```js
-import { classifyPath, changedProtectedKeys, isMutatingShell, predictFileContent } from "@arturleao/iced-core/guard";
-classifyPath(root, cwd, "intent/004-x/iced.md"); // { kind: "unit", id: "004-x", ... }
-isMutatingShell("rm -rf src");                    // true (a heuristic, not a sandbox)
+import {
+  classifyPath, changedProtectedKeys, changedConfigIntegrityKeys, isMutatingShell, predictFileContent,
+  shellMutatesOnlyOutside, writesProtectedShellTarget,
+} from "@arturleao/iced-core/guard";
+classifyPath(root, cwd, "intent/004-x/iced.md");   // { kind: "unit", id: "004-x", ... }
+isMutatingShell("rm -rf src");                      // true (a heuristic, not a sandbox)
+isMutatingShell("ls x 2>/dev/null");                // false: stderr and temp redirects do not count
+writesProtectedShellTarget("cat intent/004-x/iced.md"); // false: reading is not writing
+shellMutatesOnlyOutside(root, cwd, "cd ../other && npm ci"); // true: a sibling checkout
 ```
 
 ## Development

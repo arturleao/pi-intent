@@ -176,7 +176,10 @@ Ownership of transitions:
 
 While a unit is `draft`, the agent MAY edit its body and unprotected fields. After sign-off the agent
 MUST NOT edit the Intent or Expectations sections; the only path to change them is an escalation that
-the human resolves by editing the contract, after which the hash is recomputed.
+the human resolves by editing the contract, after which the hash is recomputed. Other parts of the unit
+(Context, Open questions, title, tier, risk) MAY still be edited by the agent after sign-off, provided the
+contract hash and protected fields stay unchanged and the unit stays valid. Accepted and rejected units
+are closed and MUST NOT be edited.
 
 ## 7. Autonomy
 
@@ -344,7 +347,8 @@ hold an object keyed by host name with an optional `default`; a tool SHOULD read
 `build.testWriterModel` and
 `build.testWriterEffort` set the same for the test writer. Only a human SHOULD change the verifier models, and
 an Enforcer SHOULD block agents from changing them. `gate` is `strict` (block while a unit is active), `always` (also block code changes when no unit is active),
-`warn` (notify) or `off`. With no active unit and gate `strict`, agents work normally.
+`warn` (notify instead of blocking code changes; protection of owned files, protected fields, the frozen contract
+and the verifier settings MUST still block) or `off`. With no active unit and gate `strict`, agents work normally.
 
 ## 13. Hosts
 
@@ -359,7 +363,7 @@ access. Set-up writes only the files in section 3; anything a host needs beyond 
 |---|---|
 | Reader | parses units per section 4 and reports lint errors per `spec/rubric.md` and section 5. |
 | Writer | also creates units from templates, keeps unknown fields and sections, records sign-off and acceptance with the contract hash, and follows the transitions in section 6. |
-| Enforcer | also prevents agents from changing code outside a building unit, editing a frozen contract or protected fields, and self-approving; and runs verification per section 8.6. |
+| Enforcer | also prevents agents from editing a frozen contract, protected fields or ICED-owned files, and from self-approving or choosing their own verifiers; freezes code changes inside the repository outside a building unit at effective autonomy 0 and 1 (at 2 and 3 it MAY allow them with a notice, since verification checks the result against the contract); and runs verification per section 8.6. |
 
 Without an Enforcer the rules are followed on trust; a Reader still detects contract changes through the hash.
 

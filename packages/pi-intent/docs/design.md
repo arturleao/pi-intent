@@ -212,7 +212,8 @@ Return `{ errors: Issue[], warnings: Issue[] }`, `Issue = { code, message, line?
 ```
 
 `gate`: `strict` blocks while a unit is active (no active unit: normal work), `always` also blocks code changes
-with no active unit, `warn` notifies, `off` disables. `memory.knowledge` entries may be paths outside
+with no active unit, `warn` turns the code/shell freeze into notices but keeps hard blocks (owned files, protected
+keys, frozen contract, config integrity keys, read-only review units; `hard: true` on the decision), `off` disables. `memory.knowledge` entries may be paths outside
 the repo (shared org knowledge base for enterprise use). Missing keys take these defaults; unknown keys are ignored
 (older versions wrote `targets` and a `runner` key under `verify`).
 
@@ -382,18 +383,32 @@ Applies when `findRoot(cwd)` exists and gate is not off. Code and shell rules ap
 active (`.iced/active` names a unit that is not accepted or rejected), unless the gate is `always`. The ICED
 file rules apply in every mode except `off`. `/iced use none` clears the active unit.
 
-- `write`/`edit` to a path outside `intent/` and `.iced/`: with an active unit, allowed only when it is
-  `building`; with none, allowed (blocked when the gate is `always`). At autonomy 0 each such call asks confirm.
-- `write`/`edit` of a unit's `iced.md`: allowed only while that unit is `draft`, and never changing protected
-  keys. `decisions.md` always allowed. `evidence.md`, `verify.json`, `.iced/config.json`, `.iced/active`,
-  `.iced/metrics.jsonl`: never (extension-owned; also protected from shell writes).
-- `bash`/`powershell`: when the active unit is not `building` (or, with `always`, no unit is active), block
-  commands matching the core mutation heuristic (`isMutatingShell`: redirection, PowerShell and POSIX file commands,
-  destructive git commands, package installs, in-place edits). Redirection inside quoted strings and heredocs
-  doesn't count. `git add|commit|push|tag` only record work, so they are allowed in any state, including after
-  accept. Also block commands that write into ICED-owned files. Documented as best effort; verification also reports
-  files changed since `base_ref`.
-- Block reason tells the agent exactly what to do next (e.g. "Run /iced <intent> or call iced_request_signoff").
+- `write`/`edit` to a path outside `intent/` and `.iced/`: with an active unit that is not `building`, blocked
+  at effective autonomy 0-1 and allowed with a `notify` decision (UI notice, call runs) at autonomy 2-3; with
+  none, allowed (blocked when the gate is `always`). At autonomy 0 each call while building asks confirm.
+  Review units are read-only at every autonomy.
+- `write`/`edit` of a unit's `iced.md`: never changing protected keys; while `draft` anything else goes. After
+  sign-off the predicted content must keep `contract_hash` (Intent and Expectations) and lint clean at validate;
+  Context, Open questions and unprotected frontmatter may change. A unit blocked before sign-off has no hash, so
+  only its protected keys are frozen. Accepted/rejected units are closed. `decisions.md` always allowed.
+  `evidence.md`, `verify.json`, `.iced/active`, `.iced/metrics.jsonl`: never (extension-owned; also protected
+  from shell writes).
+- `write`/`edit` of `.iced/config.json`: predicted content must be valid JSON and leave every
+  `CONFIG_INTEGRITY_KEYS` entry (`gate`, `autonomy`, `maxAutonomy`, `autonomyByRisk`, `verify.model`,
+  `verify.independent`, `verify.lenses`, `verify.maxAttempts`, `build.testWriterModel`) deep-equal; other keys
+  are the agent's to tune. Shell writes to the config are always blocked (content cannot be predicted).
+- `bash`/`powershell`: commands that write to an ICED-owned path (`writesProtectedShellTarget`: redirect target,
+  file-writing command or API argument, cp/mv destination) are blocked in every state; merely reading such a path
+  is fine. When the active unit is not `building` (or, with `always`, no unit is active), commands matching the
+  core mutation heuristic (`isMutatingShell`: redirection, PowerShell and POSIX file commands, destructive git
+  commands, package installs, in-place edits) are blocked at autonomy 0-1 and notified at 2-3. Redirection inside
+  quoted strings and heredocs, stderr-only redirects, `2>&1`, and redirects to `$null`/`/dev/null`/temp
+  locations don't count. Commands whose every mutation resolves outside the root (`shellMutatesOnlyOutside`:
+  `cd`/`Set-Location`/`pushd` prefixes, `git -C`, absolute paths; unresolvable variables or globs count as inside)
+  are allowed. `git add|commit|push|tag` only record work, so they are allowed in any state, including after
+  accept. Documented as best effort; verification also reports files changed since `base_ref`.
+- Every block reason ends with a "Next step" naming an `iced_*` tool, `decisions.md`, `review.md` or the `/iced`
+  command to ask the human for; a test walks every block path.
 - Children started with `ICED_ROLE=verifier` load the extension in read-only mode: only `read`, `grep`, `find` and
   `ls` may run (`verifierToolDecision`); `write`, `edit`, every shell and any other tool are blocked; other ICED
   features are off. A shell cannot be limited to reads, so verifiers get none. Any other `ICED_ROLE` (the test writer) loads nothing.
