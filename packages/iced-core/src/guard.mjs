@@ -123,8 +123,9 @@ export function changedConfigIntegrityKeys(beforeText, afterText) {
 // Recording work (git add/commit/push/tag) leaves the working tree alone, so it is not "mutating".
 const REDIRECT = /(^|[^<>=&|])>>?(?!&)\s*[^\s&|]/; // redirection to a file (not 2>&1)
 // Redirect targets that never change the repository: discard devices and temp locations.
-// Discard devices must end the token (`> NUL.txt` is a repository file); temp prefixes may continue into a path.
-const BENIGN_TARGET = String.raw`(?:&\d|(?:\$null|/dev/null|NUL)(?=$|[\s&|;)"'])|(?:\$env:TE?MP|%TE?MP%|\$\{?TMPDIR\}?|\$\{?TMP\}?|\$\{?TEMP\}?|/tmp/|/private/tmp/|/var/tmp/)[^\s&|;)]*)`;
+// Discard devices must end the token (`> NUL.txt` is a repository file); temp prefixes may continue into a path,
+// but not into intent/ or .iced/: a repository may itself live in a temp directory.
+const BENIGN_TARGET = String.raw`(?:&\d|(?:\$null|/dev/null|NUL)(?=$|[\s&|;)"'])|(?:\$env:TE?MP|%TE?MP%|\$\{?TMPDIR\}?|\$\{?TMP\}?|\$\{?TEMP\}?|/tmp/|/private/tmp/|/var/tmp/)(?![^\n&|;)]*?(?<![\w.-])(?:intent|\.iced)[\\/])[^\s&|;)]*)`;
 const QUOTED = String.raw`"[^"]*"|'[^']*'`;
 const STDERR_REDIRECT = new RegExp(String.raw`(^|[^<>=&|\w])2>>?\s*(?:${QUOTED}|[^\s&|;)"']+)`, "g");
 const BENIGN_REDIRECT = new RegExp(String.raw`(^|[^<>=&|])[\d*]?>>?\s*(?:"${BENIGN_TARGET}[^"]*"|'${BENIGN_TARGET}[^']*'|${BENIGN_TARGET})`, "gi");

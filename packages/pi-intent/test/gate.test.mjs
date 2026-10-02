@@ -230,7 +230,8 @@ test("007 E1: stderr-only, discard and temp-dir redirects are not mutating; repo
     assert.equal(isMutatingShell(c), false, c);
   }
   for (const c of ["echo x > a.txt", "npm test > out.txt 2>&1", "ls 2>/dev/null > list.txt", "cmd >> log.md", "echo x > ./tmp/a.txt", "echo x > \"my file.txt\"", "ls 2> err.log > out.log",
-    "echo x > NUL.txt", "echo x > NULL", "echo x > /dev/null.bak", "echo x > $nullable", "echo x > tmp/a.txt", "echo x > tmpfile"]) {
+    "echo x > NUL.txt", "echo x > NULL", "echo x > /dev/null.bak", "echo x > $nullable", "echo x > tmp/a.txt", "echo x > tmpfile",
+    "echo x > /tmp/repo/intent/001-dark-mode/iced.md", "echo x > /tmp/intent/001-dark-mode/iced.md", "echo x > $env:TEMP\\repo\\.iced\\active", "echo x > \"/tmp/my repo/.iced/config.json\""]) {
     assert.equal(isMutatingShell(c), true, c);
   }
   // Command names inside quoted strings are text, not commands; inline scripts still count.
@@ -274,7 +275,8 @@ test("007 E2: reading an ICED-owned file is allowed; writing to it is blocked", 
     "rm -rf intent/001-dark-mode", "rm -rf intent/001-dark-mode/", "rm -rf ./intent", "rm -rf .iced", "rm -r intent", "rmdir /s /q intent\\001-dark-mode", "Remove-Item -Recurse -Force intent/001-dark-mode",
     "Remove-Item .iced -Recurse", "git rm -r intent/001-dark-mode", "mv intent/001-dark-mode old", "Move-Item intent/001-dark-mode old", "git mv intent/001-dark-mode intent/999-x",
     'rm -rf "intent/001-dark-mode"', "Remove-Item -Recurse 'intent/001-dark-mode'", 'rm -rf ".iced"', 'mv "intent/001-dark-mode" old',
-    `rm -rf ${root}/intent/001-dark-mode`, "npm test && rm -rf .iced"]) {
+    `rm -rf ${root}/intent/001-dark-mode`, "npm test && rm -rf .iced",
+    `echo x > /tmp/repo/${u}`, `echo x > /tmp/${u}`, "echo x > $env:TEMP/repo/.iced/active", `cat a 2>/dev/null > /private/tmp/r/${u}`]) {
     assert.equal(writesProtectedShellTarget(c), true, c);
     assert.equal(d(c).action, "block", c);
     assert.match(d(c).reason, /ICED-owned/);
