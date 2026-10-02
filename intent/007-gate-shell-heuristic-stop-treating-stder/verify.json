@@ -1,0 +1,183 @@
+{
+  "id": "007-gate-shell-heuristic-stop-treating-stder",
+  "title": "Read-only shell commands pass the gate",
+  "attempt": 1,
+  "ts": "2026-10-02T12:53:50Z",
+  "summary": "Shell heuristic in packages/iced-core/src/guard.mjs: stderr-only, 2>&1, discard ($null, /dev/null, NUL ending the token) and temp-dir redirects are not mutating, and redirect parsing is quote-aware. Command patterns run on quote-masked text, and PowerShell cmdlets count only in command position, so commit messages and grep patterns that name writer commands are reads. Protected-target detection (writesProtectedShellTarget plus shellWritesProtectedPath) fires only when a writer in the same segment targets an owned path: a redirect, Set-Content/Add-Content/Out-File, sed -i, WriteAllText, a cp/mv/Copy-Item destination, rm/mv of a protected file or unit directory (quoted or not), or git diff > path. Pure reads of owned paths pass. All findings from the last attempt are fixed and covered: anchored cmdlets (grep Set-Content <path>), cp <protected> followed by a trailing redirect, and masked commit messages under a live frozen unit. Per C4, changes in the same files for units 008-012 are batch artifacts.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs '007 E1' (stderr, 2>&1, $null, /dev/null, NUL, temp-dir, quoted-redirect lists are non-mutating; NUL.txt, tmp/a.txt, repo-path redirects and inline scripts are mutating; quoted command names in messages and patterns are not mutating)"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs '007 E2' (Get-Content, cat, type, grep, rg, Select-String, git diff/show/stash/log naming owned paths allowed, including grep with a writer name as argument and live done-unit cases; redirects, Set-Content/Add-Content/Out-File, sed -i, WriteAllText, cp/mv/Copy-Item/Move-Item destinations, cp with trailing redirect, git diff > path, rm/mv of quoted and unquoted unit folders blocked)"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test: 130 tests (80 iced-core, 50 pi-intent), 0 fail; git diff --check clean"
+    }
+  ],
+  "files": [
+    "packages/iced-core/README.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/pi-intent/README.md",
+    "packages/pi-intent/docs/design.md",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 19014,
+      "timedOut": false,
+      "tail": "...its (2.1468ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (11.1017ms)\n✔ gate: original-file multi-edits cannot bypass protected status (8.7961ms)\n✔ gate: unpredictable draft edits fail closed (10.4152ms)\n✔ gate: building allows code, freezes the contract (12.0446ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (38.9412ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (16.4335ms)\n✔ 007 E1: stderr-only, discard and temp-dir redirects are not mutating; repo redirects are (0.2506ms)\n✔ 007 E2: reading an ICED-owned file is allowed; writing to it is blocked (25.63ms)\n✔ 008 E1/E2: not building, mutations outside the root are allowed; inside, relative, mixed or unresolvable stay blocked (133.1328ms)\n✔ 008 E3: gate always without an active unit allows outside-only mutations and blocks inside ones (2.4556ms)\n✔ 009 E1: at autonomy 2 or 3 the not-building freeze notifies instead of blocking; 0 and 1 block (65.9257ms)\n✔ 009 E2: owned files, protected keys, the frozen contract and review units still block at autonomy 2 and 3 (51.6511ms)\n✔ 009 C2/C3: protection blocks are hard (kept in gate mode warn); the not-building freeze is not (32.0922ms)\n✔ 009 E3: the extension allows notify decisions and shows a notice when a UI exists (0.6186ms)\n✔ 010 E1: after sign-off, Context, Open questions and unprotected frontmatter may change; closed units are frozen (94.7823ms)\n✔ 010 E2: contract text, protected keys and invalid results are blocked with the changed section named (19.5832ms)\n✔ 011 E1: operational config keys may change; integrity keys, their removal or invalid JSON are blocked (10.1599ms)\n✔ 011 E2/E3: other ICED-owned files and shell writes to the config stay blocked; the key list is exported once (19.511ms)\n✔ 012 E1: every block reason names a concrete next step, stays short and has no absolute local path (117.1389ms)\n✔ 012 E2: blocked, verifying, done and shell not-building reasons name the human command or tool (86.9778ms)\n✔ no file targets another harness or the removed CLI (168.9208ms)\n✔ removed paths stay removed (155.6356ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.5164ms)\n✔ no package exposes a CLI (0.6844ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (1358.6413ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (1409.5134ms)\n✔ every module the extension imports is in the tarball or a declared dependency (1319.6391ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.6694ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.618ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.8276ms)\n✔ models without thinking only toggle off and say so (0.2582ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1762ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.2122ms)\n✔ typing filters models but keeps actions and rotations (0.2054ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2624ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1293ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.9714ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.2415ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (588.4846ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1420.8696ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (611.587ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (768.6126ms)\nℹ tests 50\nℹ suites 0\nℹ pass 50\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4319.8181\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": false,
+      "error": "verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached",
+      "durationMs": 11533
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": false,
+    "needsHuman": true,
+    "commandsOk": true,
+    "problems": [
+      "Independent verifier unavailable: full: verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached. Result needs human review."
+    ],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "Commands whose only redirects are stderr-only, `2>&1`, `$null`/`/dev/null`, or temp-dir targets are not mutating; redirects to other repository paths still are.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs '007 E1' (stderr, 2>&1, $null, /dev/null, NUL, temp-dir, quoted-redirect lists are non-mutating; NUL.txt, tmp/a.txt, repo-path redirects and inline scripts are mutating; quoted command names in messages and patterns are not mutating)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E2",
+        "text": "Commands that only read an ICED-owned path (Get-Content, cat, type, grep, rg, Select-String, git diff/show/stash naming the path) are allowed; commands that write to such a path (redirect, Set-Content/Add-Content/Out-File, sed -i, WriteAllText, cp/mv/Copy-Item/Move-Item destination) are still blocked.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs '007 E2' (Get-Content, cat, type, grep, rg, Select-String, git diff/show/stash/log naming owned paths allowed, including grep with a writer name as argument and live done-unit cases; redirects, Set-Content/Add-Content/Out-File, sed -i, WriteAllText, cp/mv/Copy-Item/Move-Item destinations, cp with trailing redirect, git diff > path, rm/mv of quoted and unquoted unit folders blocked)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E3",
+        "text": "Existing mutating-command cases keep their classification and the full suite passes.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test: 130 tests (80 iced-core, 50 pi-intent), 0 fail; git diff --check clean"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "A command whose only redirect is stderr-only (`2>/dev/null`, `2>$null`, `2>file`) or `2>&1` is classified as mutating.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F2",
+        "text": "A command whose only redirect targets a temp location (`$env:TEMP`, `$TMPDIR`, `/tmp`, `%TEMP%`) is classified as mutating.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F3",
+        "text": "A command that only reads an ICED-owned file (Get-Content, cat, Select-String, grep, rg, type, git stash/diff/show naming the path) is blocked as modifying ICED-owned files.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F4",
+        "text": "A command that writes to an ICED-owned file (redirect into it, Set-Content, sed -i, [IO.File]::WriteAllText, cp/mv onto it) stops being blocked.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Commands that really write files inside the repository, or really write to iced.md, evidence.md, verify.json or .iced state, stay classified as mutating and protected as today.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C2",
+        "text": "The heuristic stays host-neutral in iced-core guard; no sandboxing or command execution to classify.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C3",
+        "text": "`git add|commit|push|tag` and other non-mutating git commands remain allowed as today.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C4",
+        "text": "Implementations of the other approved gate units 008-012 in the same files are allowed batch artifacts, not out-of-scope violations; this unit remains responsible only for the shell heuristic.",
+        "from": "007-gate-shell-heuristic-stop-treating-stder",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": ""
+  },
+  "verdict": "pass"
+}

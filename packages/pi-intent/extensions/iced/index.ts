@@ -420,12 +420,15 @@ function rulesSummary(root: string, unit: Unit): string {
   const eff = core.effectiveAutonomy(fm, cfg);
   const L: string[] = [];
   L.push(`Active ICED unit: ${unit.id} (intent/${unit.id}/iced.md), status ${fm.status}, effective autonomy ${eff}.`);
+  const freeze = eff >= 2
+    ? "Code changes now are allowed with a notice at this autonomy; verification checks them against the contract."
+    : "No code changes yet.";
   switch (fm.status) {
     case "draft":
-      L.push("Drafting: gather context (code first), fill Intent and Expectations, ask only high-risk questions with iced_questions, then call iced_request_signoff. No code changes yet.");
+      L.push(`Drafting: gather context (code first), fill Intent and Expectations, ask only high-risk questions with iced_questions, then call iced_request_signoff. ${freeze}`);
       break;
     case "approved":
-      L.push("Approved, build not started. When the human asks you to implement or build it, call iced_build. Do not change code before that.");
+      L.push(`Approved, build not started. When the human asks you to implement or build it, call iced_build. ${eff >= 2 ? freeze : "Do not change code before that."}`);
       break;
     case "building": {
       const max = cfg.verify.maxAttempts;
@@ -433,7 +436,7 @@ function rulesSummary(root: string, unit: Unit): string {
         `Building (attempt ${(fm.attempts ?? 0) + 1} of ${max}). You own the how: plan, decide and implement autonomously.`,
         "Stay inside Scope and every constraint, including inherited ones. Log significant decisions with iced_decision.",
         "Escalate only with iced_escalate for: ambiguity, conflict, change-expectation, irreversible, stuck.",
-        "Intent and Expectations are frozen. Finish with iced_submit and evidence for every expectation.",
+        "Intent and Expectations are frozen; Context, Open questions and notes in iced.md may still be updated. Finish with iced_submit and evidence for every expectation.",
       );
       if (fm.type === "review") L.push(`Review unit: read-only. Write findings to intent/${unit.id}/review.md.`);
       try {
@@ -443,8 +446,8 @@ function rulesSummary(root: string, unit: Unit): string {
       break;
     }
     case "verifying": L.push("Verification is running. Wait."); break;
-    case "done": L.push("Verified; waiting for human acceptance (/iced accept). Do not change code unless the human rejects."); break;
-    case "blocked": L.push("Blocked waiting for the human. Do not change code."); break;
+    case "done": L.push(`Verified; waiting for human acceptance (/iced accept ${unit.id}). ${eff >= 2 ? freeze : "Do not change code unless the human rejects."}`); break;
+    case "blocked": L.push(`Blocked waiting for the human (/iced build ${unit.id} to retry, /iced reject ${unit.id} to abandon). ${eff >= 2 ? freeze : "Do not change code."}`); break;
     default: L.push("This unit is closed. Start new work with iced_start.");
   }
   L.push("", core.summarizeUnit(unit.parsed));
@@ -918,11 +921,16 @@ export default function iced(pi: ExtensionAPI) {
     const autonomy = active ? core.effectiveAutonomy(active.parsed.frontmatter, cfg) : 1;
     const d: any = gateDecision({ root, cwd: cwdOf(ctx), toolName: event.toolName, input, autonomy, always: mode === "always" });
     if (d.action === "allow") return undefined;
-    if (d.action === "confirm") {
-      if (!ctx.hasUI) return { block: true, reason: "ICED autonomy 0 needs a human to confirm each change, and no UI is available." };
-      return (await ctx.ui.confirm(d.title, d.message)) ? undefined : { block: true, reason: "The human declined this change." };
+    if (d.action === "notify") {
+      if (ctx.hasUI) ctx.ui.notify(`ICED: ${d.reason}`, "info");
+      return undefined;
     }
-    if (mode === "warn") {
+    if (d.action === "confirm") {
+      const id = active?.parsed.frontmatter.id ?? "<id>";
+      if (!ctx.hasUI) return { block: true, reason: `ICED autonomy 0 needs a human to confirm each change, and no UI is available. Next step: record the change in intent/${id}/decisions.md and ask the human to run /iced autonomy 1 ${id}.` };
+      return (await ctx.ui.confirm(d.title, d.message)) ? undefined : { block: true, reason: `The human declined this change. Next step: record what you intended in intent/${id}/decisions.md and ask the human how to proceed.` };
+    }
+    if (mode === "warn" && !d.hard) {
       if (ctx.hasUI) ctx.ui.notify(`ICED (warn): ${d.reason}`, "warning");
       return undefined;
     }

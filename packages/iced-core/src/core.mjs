@@ -218,6 +218,16 @@ export function contractHash(text) {
   return crypto.createHash("sha256").update(material, "utf8").digest("hex");
 }
 
+/** Which contract sections ("Intent", "Expectations") differ between two versions of a unit, after normalization. */
+export function changedContractSections(beforeText, afterText) {
+  const a = h2Sections(beforeText);
+  const b = h2Sections(afterText);
+  const out = [];
+  if (normalizeBlock(a.intent) !== normalizeBlock(b.intent)) out.push("Intent");
+  if (normalizeBlock(a.expectations) !== normalizeBlock(b.expectations)) out.push("Expectations");
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Lint
 // ---------------------------------------------------------------------------

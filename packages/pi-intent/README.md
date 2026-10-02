@@ -88,13 +88,31 @@ The gate applies while a unit is active: from `/iced <request>` until you accept
 `/iced use none`. With no active unit the agent works normally. Set `"gate": "always"` in `.iced/config.json` if
 every code change in the repo must go through ICED.
 
-- While a unit is active, no code changes unless it is `building` (write, edit and shell commands that look like
-  they change files are blocked; read-only commands and `git add|commit|push|tag` are fine).
-- The unit file is editable only while `draft`, and never its protected fields (status, autonomy,
-  hashes, approvals).
+- While a unit is active and not `building`, code changes inside the repository are frozen at effective
+  autonomy 0 and 1 (write, edit and shell commands that look like they change files are blocked). At autonomy
+  2 and 3 they go through with a notice; verification then checks them against the contract. Read-only
+  commands, `git add|commit|push|tag`, stderr/temp redirects and work in other directories (sibling worktrees,
+  temp dirs, other repos) are always fine.
+- The unit file's protected fields (status, autonomy, hashes, approvals) are never editable by agents.
 - After sign-off, Intent and Expectations are frozen by `contract_hash`; changes go through
-  `iced_escalate` and your edit.
-- Agents cannot approve or accept, or change the models that verify their work.
+  `iced_escalate` and your edit. Context, Open questions, title, tier and risk stay editable.
+- Agents cannot approve or accept, or change the models that verify their work. In `.iced/config.json` the
+  integrity keys `gate`, `autonomy`, `maxAutonomy`, `autonomyByRisk`, `verify.model`, `verify.independent`,
+  `verify.lenses`, `verify.maxAttempts` and `build.testWriterModel` are human-only; operational keys
+  (`verify.commands`, `verify.timeoutSec`, memory paths, ...) may be edited by the agent when you ask.
+- `evidence.md`, `verify.json`, `.iced/active` and `.iced/metrics.jsonl` are written only by the tooling.
+- Gate mode `warn` turns the code freeze into notices; the protections above still block in every mode except `off`.
+- Every block names the agent's next step:
+  - frozen Intent/Expectations: `iced_escalate` (`change-expectation`), or notes in `decisions.md`;
+  - owned files (`evidence.md`, `verify.json`, `.iced` state): `iced_submit` for evidence, `iced_decision` for decisions;
+  - protected fields: `iced_request_signoff` for sign-off, `iced_decision` for anything else;
+  - config integrity keys: ask you for `/iced autonomy`, `/iced gate` or `/iced models`;
+  - shell writes to owned files: the edit tool for notes and operational config, `iced_submit`, `iced_decision`;
+  - code while `draft`: finish the draft, `iced_request_signoff`; while `approved`: `iced_build` or `/iced build <id>`;
+    while `verifying`/`done`: `/iced accept <id>` or `/iced reject <id>`; while `blocked`: `/iced build <id>` (retry) or
+    `/iced reject <id>`; review units: `review.md`; no active unit under `always`: `iced_start`;
+  - autonomy 0 without a UI or declined: notes in `decisions.md`, then ask you (`/iced autonomy 1 <id>`);
+  - verifier agents: read-only tools only (`read`, `grep`, `find`, `ls`), then the verdict.
 - A build that stops without submitting gets up to two nudges to finish or escalate.
 - "Done" is decided by `verify.commands` (run in parallel) plus independent verifiers: separate pi processes
   with fresh context and only read tools (read, grep, find, ls; no shell, no write or edit) that try to prove the

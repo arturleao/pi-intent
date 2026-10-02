@@ -1,0 +1,203 @@
+{
+  "id": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+  "title": "Trusted and autonomous units are not frozen before building",
+  "attempt": 1,
+  "ts": "2026-10-02T14:27:05Z",
+  "summary": "gateDecision in packages/pi-intent/src/gate.mjs returns { action: \"notify\", reason } for code edits and mutating shell when the active unit is not building and effective autonomy is 2 or 3. At autonomy 0 and 1 it blocks as before. Protection blocks (ICED-owned files, config integrity keys, protected keys, frozen contract, accepted or rejected units, review units, shell writes to protected targets) carry hard: true and block at every autonomy level. The extension's warn mode downgrades only non-hard blocks, so protections hold in every gate mode except off. The extension shows notify decisions once per call via ctx.ui.notify('ICED: <reason>') and allows the call. Fixed since attempt 3: quoted protected directories (rm -rf \"intent/<id>\") are kept through quote masking, so they hard-block instead of returning notify. Shared files also carry the other approved gate units' changes; this unit covers the autonomy policy only.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs '009 E1' (notify at autonomy 2/3 and block at 0/1 for draft, approved, verifying, done and blocked, for code edits and mutating shell)"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs '009 E2' (owned files, protected keys, frozen contract, review units, mv/rm of iced.md, unit folders and .iced, quoted or not, block at autonomy 2/3) and '009 C2/C3' (protection blocks hard: true; freeze blocks not hard; index.ts warn branch checks !d.hard)"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test: 130 tests (80 iced-core, 50 pi-intent), 0 fail, including '009 E3' source check of the extension's notify branch in packages/pi-intent/extensions/iced/index.ts; git diff --check clean"
+    },
+    {
+      "expectation": "E4",
+      "kind": "manual",
+      "ref": "packages/pi-intent/README.md 'What is enforced' (autonomy 0-1 freeze inside the repo while not building, autonomy 2-3 proceed with a notice, protections block in every mode except off) and packages/iced-core/spec/SPEC.md section 14 Enforcer row plus section 12 (warn keeps protection blocks)"
+    }
+  ],
+  "files": [
+    "packages/iced-core/README.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/pi-intent/README.md",
+    "packages/pi-intent/docs/design.md",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 18733,
+      "timedOut": false,
+      "tail": "...its (2.3833ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (12.4834ms)\n✔ gate: original-file multi-edits cannot bypass protected status (8.4384ms)\n✔ gate: unpredictable draft edits fail closed (9.8049ms)\n✔ gate: building allows code, freezes the contract (27.0168ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (67.9935ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (16.0004ms)\n✔ 007 E1: stderr-only, discard and temp-dir redirects are not mutating; repo redirects are (0.2267ms)\n✔ 007 E2: reading an ICED-owned file is allowed; writing to it is blocked (22.4456ms)\n✔ 008 E1/E2: not building, mutations outside the root are allowed; inside, relative, mixed or unresolvable stay blocked (112.8609ms)\n✔ 008 E3: gate always without an active unit allows outside-only mutations and blocks inside ones (1.6507ms)\n✔ 009 E1: at autonomy 2 or 3 the not-building freeze notifies instead of blocking; 0 and 1 block (54.7602ms)\n✔ 009 E2: owned files, protected keys, the frozen contract and review units still block at autonomy 2 and 3 (46.316ms)\n✔ 009 C2/C3: protection blocks are hard (kept in gate mode warn); the not-building freeze is not (26.9845ms)\n✔ 009 E3: the extension allows notify decisions and shows a notice when a UI exists (0.3714ms)\n✔ 010 E1: after sign-off, Context, Open questions and unprotected frontmatter may change; closed units are frozen (77.1908ms)\n✔ 010 E2: contract text, protected keys and invalid results are blocked with the changed section named (14.1532ms)\n✔ 011 E1: operational config keys may change; integrity keys, their removal or invalid JSON are blocked (7.5879ms)\n✔ 011 E2/E3: other ICED-owned files and shell writes to the config stay blocked; the key list is exported once (16.2573ms)\n✔ 012 E1: every block reason names a concrete next step, stays short and has no absolute local path (80.4944ms)\n✔ 012 E2: blocked, verifying, done and shell not-building reasons name the human command or tool (91.4615ms)\n✔ no file targets another harness or the removed CLI (128.4427ms)\n✔ removed paths stay removed (129.1152ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.3448ms)\n✔ no package exposes a CLI (0.477ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (1150.0382ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (1127.3295ms)\n✔ every module the extension imports is in the tarball or a declared dependency (1103.7305ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3671ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.5049ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.6915ms)\n✔ models without thinking only toggle off and say so (0.2205ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.2167ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.2054ms)\n✔ typing filters models but keeps actions and rotations (0.1715ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2266ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1148ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.8204ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.1096ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (460.2277ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1291.7078ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (479.6525ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (597.8512ms)\nℹ tests 50\nℹ suites 0\nℹ pass 50\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 3584.2766\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": false,
+      "error": "verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached",
+      "durationMs": 9209
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": false,
+    "needsHuman": true,
+    "commandsOk": true,
+    "problems": [
+      "Independent verifier unavailable: full: verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached. Result needs human review."
+    ],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "`gateDecision` returns a non-blocking notify decision for code edits and mutating shell commands when the active unit is not building and effective autonomy is 2 or 3; returns block at autonomy 0 or 1 as today.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs '009 E1' (notify at autonomy 2/3 and block at 0/1 for draft, approved, verifying, done and blocked, for code edits and mutating shell)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E2",
+        "text": "Owned files, protected keys, frozen contract and review units still return block at autonomy 2 and 3.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs '009 E2' (owned files, protected keys, frozen contract, review units, mv/rm of iced.md, unit folders and .iced, quoted or not, block at autonomy 2/3) and '009 C2/C3' (protection blocks hard: true; freeze blocks not hard; index.ts warn branch checks !d.hard)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E3",
+        "text": "The extension allows notify decisions and shows a notice when a UI exists; README and SPEC describe the policy per autonomy level.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test: 130 tests (80 iced-core, 50 pi-intent), 0 fail, including '009 E3' source check of the extension's notify branch in packages/pi-intent/extensions/iced/index.ts; git diff --check clean"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E4",
+        "text": "README and SPEC state the rule: autonomy 0-1 freeze code outside building, autonomy 2-3 notify; contract, protected fields and owned files always block.",
+        "kind": "manual",
+        "ref": "docs review",
+        "claims": [
+          {
+            "expectation": "E4",
+            "kind": "manual",
+            "ref": "packages/pi-intent/README.md 'What is enforced' (autonomy 0-1 freeze inside the repo while not building, autonomy 2-3 proceed with a notice, protections block in every mode except off) and packages/iced-core/spec/SPEC.md section 14 Enforcer row plus section 12 (warn keeps protection blocks)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "An autonomy 2 or 3 unit's code change or mutating shell command is blocked solely because the unit is not building.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F2",
+        "text": "An autonomy 0 or 1 unit's code change while not building is allowed by this change.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F3",
+        "text": "Any autonomy level can edit a frozen contract, a protected key or an ICED-owned file through this change.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "At effective autonomy 0 and 1 the freeze blocks exactly as today.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C2",
+        "text": "ICED-owned files, protected frontmatter keys, the frozen contract and the verifier's read-only rule block at every autonomy level and in every gate mode except `off`.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C3",
+        "text": "Review units stay read-only at every autonomy level.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C4",
+        "text": "Independent verification still checks scope against `base_ref`; this unit does not weaken verification or acceptance.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C5",
+        "text": "The notice is emitted once per tool call, in the UI when present, and otherwise does not block.",
+        "from": "009-gate-policy-at-autonomy-2-or-3-code-chan",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": ""
+  },
+  "verdict": "pass"
+}

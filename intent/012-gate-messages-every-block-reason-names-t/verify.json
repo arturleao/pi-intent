@@ -1,0 +1,165 @@
+{
+  "id": "012-gate-messages-every-block-reason-names-t",
+  "title": "Every gate block tells the agent its next step",
+  "attempt": 2,
+  "ts": "2026-10-02T12:31:39Z",
+  "summary": "Every block reason from gateDecision, verifierToolDecision and the extension's confirm branch ends with a next-step sentence naming an iced_* tool, intent/<id>/decisions.md, a /iced human command, review.md or read-only commands: owned files -> iced_submit/iced_decision/decisions.md; protected keys -> iced_request_signoff/iced_decision (and, when contract text changed too, the frozen section plus iced_escalate change-expectation); frozen contract -> iced_escalate change-expectation or decisions.md (the 'Context and Open questions may be edited' hint now precedes the next step); invalid edit -> fix or decisions.md (first lint message truncated, count of the rest); closed unit -> iced_start/decisions.md; draft -> iced_request_signoff; approved -> iced_build or /iced build <id>; verifying -> /iced accept|reject <id> and decisions.md; done -> /iced accept|reject <id>; blocked -> /iced build <id> or /iced reject <id>; review -> review.md and iced_decision; no active unit under always -> iced_start; config integrity -> /iced autonomy|gate|models (key list bounded with 'and N more'); shell owned -> edit tool for notes/operational config, iced_submit, iced_decision ('reading them is fine' precedes); verifier -> read-only commands (read, grep, find, ls); autonomy 0 without UI / declined -> decisions.md and /iced autonomy 1 <id>. Decisions are unchanged. Reasons stay at most 330 characters with no absolute local paths. README lists the next step per block kind. Attempt-1 findings (verifying reason, confirm-branch reasons, unbounded lists, final-sentence rule, missing lint/combined paths in the enumeration, README coverage) are addressed. Units 007-011 are implemented in the same working tree.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs",
+      "note": "test '012 E1': everyBlock enumerates 60+ labelled block decisions (per status: code, shell, owned, new unit, protected, unpredictable, contract, protected+contract, invalid, invalid twice, shell owned, shell owned via cd, config missing; review code/shell; closed unit; always code/shell; config integrity, invalid JSON, emptied, unpredictable; verifierToolDecision for write/edit/bash/powershell/iced_submit) and asserts NEXT_STEP, length <= 330, no local paths, no advice to edit frozen/owned content, and that the last sentence is the next step; the extension's two confirm-branch reasons are extracted from index.ts and asserted against NEXT_STEP"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs",
+      "note": "test '012 E2': blocked code/shell name /iced build and /iced reject <id>; verifying code/shell name /iced accept <id> and decisions.md; done names /iced accept <id>; approved names iced_build and /iced build <id>; draft shell names iced_request_signoff; protected+contract names the key, 'Intent is frozen', iced_escalate and iced_request_signoff; config emptied shows 'gate, autonomy, maxAutonomy and 6 more' with a /iced command; verifier names read-only commands (read, grep, find, ls)"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test",
+      "note": "130 pass, 0 fail, git diff --check clean; packages/pi-intent/README.md 'What is enforced' ends with a per-block next-step list (frozen contract, owned files, protected fields, config integrity, shell writes, each status, review units, always mode, autonomy 0, verifier)"
+    }
+  ],
+  "files": [
+    "packages/iced-core/README.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/pi-intent/README.md",
+    "packages/pi-intent/docs/design.md",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 16193,
+      "timedOut": false,
+      "tail": "...commits (1.6197ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (9.7088ms)\n✔ gate: original-file multi-edits cannot bypass protected status (8.9365ms)\n✔ gate: unpredictable draft edits fail closed (11.4784ms)\n✔ gate: building allows code, freezes the contract (10.1051ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (31.646ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (15.2385ms)\n✔ 007 E1: stderr-only, discard and temp-dir redirects are not mutating; repo redirects are (0.2363ms)\n✔ 007 E2: reading an ICED-owned file is allowed; writing to it is blocked (21.6272ms)\n✔ 008 E1/E2: not building, mutations outside the root are allowed; inside, relative, mixed or unresolvable stay blocked (97.6962ms)\n✔ 008 E3: gate always without an active unit allows outside-only mutations and blocks inside ones (1.6424ms)\n✔ 009 E1: at autonomy 2 or 3 the not-building freeze notifies instead of blocking; 0 and 1 block (45.8122ms)\n✔ 009 E2: owned files, protected keys, the frozen contract and review units still block at autonomy 2 and 3 (37.2058ms)\n✔ 009 C2/C3: protection blocks are hard (kept in gate mode warn); the not-building freeze is not (23.2116ms)\n✔ 009 E3: the extension allows notify decisions and shows a notice when a UI exists (0.4809ms)\n✔ 010 E1: after sign-off, Context, Open questions and unprotected frontmatter may change; closed units are frozen (65.9584ms)\n✔ 010 E2: contract text, protected keys and invalid results are blocked with the changed section named (12.1688ms)\n✔ 011 E1: operational config keys may change; integrity keys, their removal or invalid JSON are blocked (6.4255ms)\n✔ 011 E2/E3: other ICED-owned files and shell writes to the config stay blocked; the key list is exported once (12.7456ms)\n✔ 012 E1: every block reason names a concrete next step, stays short and has no absolute local path (75.5017ms)\n✔ 012 E2: blocked, verifying, done and shell not-building reasons name the human command or tool (83.2291ms)\n✔ no file targets another harness or the removed CLI (136.9649ms)\n✔ removed paths stay removed (120.5442ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.3675ms)\n✔ no package exposes a CLI (0.4263ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (1050.2141ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (989.0297ms)\n✔ every module the extension imports is in the tarball or a declared dependency (952.8614ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.4999ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.5983ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (1.233ms)\n✔ models without thinking only toggle off and say so (0.9051ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.2305ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.2275ms)\n✔ typing filters models but keeps actions and rotations (0.2186ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2801ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1448ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.9739ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.1234ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (440.4733ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1208.049ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (439.6658ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (501.1847ms)\nℹ tests 50\nℹ suites 0\nℹ pass 50\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 3221.5424\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": false,
+      "error": "verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached",
+      "durationMs": 8527
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": false,
+    "needsHuman": true,
+    "commandsOk": true,
+    "problems": [
+      "Independent verifier unavailable: full: verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached. Result needs human review."
+    ],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "A test enumerates every block path of `gateDecision` and `verifierToolDecision` and asserts each reason matches the next-step pattern (names an `iced_*` tool, `decisions.md`, a `/iced` command, `review.md` or \"read-only\").",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs",
+            "note": "test '012 E1': everyBlock enumerates 60+ labelled block decisions (per status: code, shell, owned, new unit, protected, unpredictable, contract, protected+contract, invalid, invalid twice, shell owned, shell owned via cd, config missing; review code/shell; closed unit; always code/shell; config integrity, invalid JSON, emptied, unpredictable; verifierToolDecision for write/edit/bash/powershell/iced_submit) and asserts NEXT_STEP, length <= 330, no local paths, no advice to edit frozen/owned content, and that the last sentence is the next step; the extension's two confirm-branch reasons are extracted from index.ts and asserted against NEXT_STEP"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E2",
+        "text": "The `blocked`, `verifying`, `done` and shell not-building reasons name the human command or tool to use.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs",
+            "note": "test '012 E2': blocked code/shell name /iced build and /iced reject <id>; verifying code/shell name /iced accept <id> and decisions.md; done names /iced accept <id>; approved names iced_build and /iced build <id>; draft shell names iced_request_signoff; protected+contract names the key, 'Intent is frozen', iced_escalate and iced_request_signoff; config emptied shows 'gate, autonomy, maxAutonomy and 6 more' with a /iced command; verifier names read-only commands (read, grep, find, ls)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E3",
+        "text": "Full suite passes; README gate section lists the next step for each block.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test",
+            "note": "130 pass, 0 fail, git diff --check clean; packages/pi-intent/README.md 'What is enforced' ends with a per-block next-step list (frozen contract, owned files, protected fields, config integrity, shell writes, each status, review units, always mode, autonomy 0, verifier)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "A block reason exists that names no next step.",
+        "from": "012-gate-messages-every-block-reason-names-t",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F2",
+        "text": "A reason tells the agent to do something the gate would block (for example edit a frozen contract or an owned file).",
+        "from": "012-gate-messages-every-block-reason-names-t",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Every `block` reason returned by `gateDecision` and `verifierToolDecision` ends with a next-step sentence naming at least one of: an `iced_*` tool, `intent/<id>/decisions.md`, a `/iced ...` human command, or \"read-only commands\".",
+        "from": "012-gate-messages-every-block-reason-names-t",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C2",
+        "text": "Reasons stay under about 300 characters and contain no absolute local paths.",
+        "from": "012-gate-messages-every-block-reason-names-t",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C3",
+        "text": "Decisions (allow/block/confirm/notify) are unchanged; only reason text changes.",
+        "from": "012-gate-messages-every-block-reason-names-t",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": ""
+  },
+  "verdict": "pass"
+}
