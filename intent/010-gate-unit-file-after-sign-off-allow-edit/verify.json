@@ -1,0 +1,211 @@
+{
+  "id": "010-gate-unit-file-after-sign-off-allow-edit",
+  "title": "Agents can keep notes in a signed-off unit",
+  "attempt": 3,
+  "ts": "2026-10-02T12:46:54Z",
+  "summary": "After sign-off (approved, building, verifying, done, blocked) a write/edit to intent/<id>/iced.md is allowed when the predicted file changes no protected key, keeps contractHash identical and passes validate-stage lint; Context, Open questions, title, tier, risk and type may change. A signed-off unit lacking contract_hash (blocked before sign-off) freezes only protected keys. Accepted and rejected units are fully frozen; unpredictable edits block. Draft behaviour is unchanged. Contract changes block naming the changed section (core helper changedContractSections(before, after) in iced-core core.mjs) and point to iced_escalate kind change-expectation; when one edit changes both a protected key and contract text the reason names the key, the frozen section and the escalation (attempt-1 finding, regression case added). Attempt 2 failed only on scope notes about sibling units: units 007-009 and 011-012 are implemented in the same working tree by design of this batch; this unit is responsible only for the signed-off iced.md edit rule.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs",
+      "note": "test '010 E1': for approved, building, verifying, done, blocked: Context, Open questions, title, tier, risk edits and a whole-file write with a new Context line allow; unsigned blocked unit allows an Expectations edit but blocks status; accepted/rejected block any edit (hard, reason says closed)"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs",
+      "note": "test '010 E2': Intent, Expectations and combined section edits block naming the section and iced_escalate change-expectation; added constraint blocks; protected keys (status, attempts) block; status + Intent in one edit blocks naming status, 'Intent is frozen' and the escalation; duplicate section, invalid risk, unmatched/ambiguous/empty oldText block"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "npm test",
+      "note": "existing draft tests unchanged; packages/iced-core/test/core.test.mjs covers changedContractSections; 130 pass, 0 fail, git diff --check clean"
+    },
+    {
+      "expectation": "E4",
+      "kind": "manual",
+      "ref": "packages/pi-intent/README.md, packages/iced-core/spec/SPEC.md",
+      "note": "README 'What is enforced': Intent/Expectations frozen by contract_hash, Context/Open questions/title/tier/risk editable, protected fields never; SPEC section 6: same rule plus accepted/rejected units closed; iced-core README 'Guarding changes' mirrors it"
+    }
+  ],
+  "files": [
+    "packages/iced-core/README.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/pi-intent/README.md",
+    "packages/pi-intent/docs/design.md",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 18148,
+      "timedOut": false,
+      "tail": "...its (2.5457ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (12.1658ms)\n✔ gate: original-file multi-edits cannot bypass protected status (10.815ms)\n✔ gate: unpredictable draft edits fail closed (13.6316ms)\n✔ gate: building allows code, freezes the contract (15.598ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (43.8527ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (17.6413ms)\n✔ 007 E1: stderr-only, discard and temp-dir redirects are not mutating; repo redirects are (0.2386ms)\n✔ 007 E2: reading an ICED-owned file is allowed; writing to it is blocked (27.4531ms)\n✔ 008 E1/E2: not building, mutations outside the root are allowed; inside, relative, mixed or unresolvable stay blocked (140.6968ms)\n✔ 008 E3: gate always without an active unit allows outside-only mutations and blocks inside ones (2.0262ms)\n✔ 009 E1: at autonomy 2 or 3 the not-building freeze notifies instead of blocking; 0 and 1 block (63.6845ms)\n✔ 009 E2: owned files, protected keys, the frozen contract and review units still block at autonomy 2 and 3 (52.3915ms)\n✔ 009 C2/C3: protection blocks are hard (kept in gate mode warn); the not-building freeze is not (29.4827ms)\n✔ 009 E3: the extension allows notify decisions and shows a notice when a UI exists (0.4685ms)\n✔ 010 E1: after sign-off, Context, Open questions and unprotected frontmatter may change; closed units are frozen (87.0339ms)\n✔ 010 E2: contract text, protected keys and invalid results are blocked with the changed section named (15.6352ms)\n✔ 011 E1: operational config keys may change; integrity keys, their removal or invalid JSON are blocked (8.0975ms)\n✔ 011 E2/E3: other ICED-owned files and shell writes to the config stay blocked; the key list is exported once (16.1355ms)\n✔ 012 E1: every block reason names a concrete next step, stays short and has no absolute local path (93.5392ms)\n✔ 012 E2: blocked, verifying, done and shell not-building reasons name the human command or tool (90.3079ms)\n✔ no file targets another harness or the removed CLI (165.7737ms)\n✔ removed paths stay removed (167.8744ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.6565ms)\n✔ no package exposes a CLI (0.6637ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (1332.6695ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (1176.8317ms)\n✔ every module the extension imports is in the tarball or a declared dependency (1160.1134ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3828ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.7336ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (1.0405ms)\n✔ models without thinking only toggle off and say so (0.8458ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.2087ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.2263ms)\n✔ typing filters models but keeps actions and rotations (0.2137ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2725ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1312ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.9739ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.1403ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (528.3764ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1367.995ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (507.9079ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (654.275ms)\nℹ tests 50\nℹ suites 0\nℹ pass 50\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 3912.2654\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": false,
+      "error": "verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached",
+      "durationMs": 8825
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": false,
+    "needsHuman": true,
+    "commandsOk": true,
+    "problems": [
+      "Independent verifier unavailable: full: verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached. Result needs human review."
+    ],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "After sign-off (approved, building, verifying, done, blocked), edits that change only Context, Open questions or unprotected frontmatter are allowed; the same edits in accepted/rejected units are blocked.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs",
+            "note": "test '010 E1': for approved, building, verifying, done, blocked: Context, Open questions, title, tier, risk edits and a whole-file write with a new Context line allow; unsigned blocked unit allows an Expectations edit but blocks status; accepted/rejected block any edit (hard, reason says closed)"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E2",
+        "text": "Edits that change Intent or Expectations text or a protected key, or produce an invalid unit, are blocked, and the reason names the changed section (Intent or Expectations) and `iced_escalate` kind `change-expectation`.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs",
+            "note": "test '010 E2': Intent, Expectations and combined section edits block naming the section and iced_escalate change-expectation; added constraint blocks; protected keys (status, attempts) block; status + Intent in one edit blocks naming status, 'Intent is frozen' and the escalation; duplicate section, invalid risk, unmatched/ambiguous/empty oldText block"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E3",
+        "text": "Draft edit behaviour and unpredictable-edit blocking are unchanged; full suite passes.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "npm test",
+            "note": "existing draft tests unchanged; packages/iced-core/test/core.test.mjs covers changedContractSections; 130 pass, 0 fail, git diff --check clean"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E4",
+        "text": "README and SPEC say what may change after sign-off and what may not.",
+        "kind": "manual",
+        "ref": "docs review",
+        "claims": [
+          {
+            "expectation": "E4",
+            "kind": "manual",
+            "ref": "packages/pi-intent/README.md, packages/iced-core/spec/SPEC.md",
+            "note": "README 'What is enforced': Intent/Expectations frozen by contract_hash, Context/Open questions/title/tier/risk editable, protected fields never; SPEC section 6: same rule plus accepted/rejected units closed; iced-core README 'Guarding changes' mirrors it"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "An edit after sign-off that changes Intent or Expectations text, or a protected key, is allowed.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F2",
+        "text": "An edit after sign-off that changes only Context, Open questions, title, tier, risk or type is blocked.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F3",
+        "text": "The block message for a contract change does not name the changed section or `iced_escalate` with kind `change-expectation`.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "An edit is allowed only when the predicted file keeps `contractHash` identical and changes no protected key; anything else is blocked.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C2",
+        "text": "Edits that cannot be predicted (missing, ambiguous, overlapping or empty `oldText`) stay blocked.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C3",
+        "text": "Edits that would make the unit invalid at validate stage (for example duplicate canonical sections, missing required sections) are blocked.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C4",
+        "text": "Accepted and rejected units stay frozen entirely.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C5",
+        "text": "Draft behaviour (edits allowed except protected keys) is unchanged.",
+        "from": "010-gate-unit-file-after-sign-off-allow-edit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": ""
+  },
+  "verdict": "pass"
+}

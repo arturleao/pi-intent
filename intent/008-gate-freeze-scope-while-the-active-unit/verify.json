@@ -1,0 +1,167 @@
+{
+  "id": "008-gate-freeze-scope-while-the-active-unit",
+  "title": "The freeze applies only inside the repository",
+  "attempt": 1,
+  "ts": "2026-10-02T14:15:09Z",
+  "summary": "shellMutatesOnlyOutside(root, cwd, command) in packages/iced-core/src/guard.mjs, built on mutatingSegments, lets the gate allow mutating shell while the unit is not building (and under always mode without an active unit) only when every effective working directory and every operand resolves outside the ICED root. It tracks cd/Set-Location/pushd/popd (quoted dirs with spaces), git -C, subshell scopes, 'cd X || exit' versus 'cd X || <cmd>' (pre-cd dir, or fail closed), pipes (a cd next to | is ignored), --flag=value operands, sed/perl -i file operands (script args dropped) and WSL /mnt/<drive>/ paths. It fails closed on variables, globs, bare cd, unresolvable dirs and any inside or relative target. Fixed since attempt 3: sed -i on outside files from the root; '||' and '|' no longer leak the cd directory; 'cd ../missing || rm .iced/active' is blocked by shellWritesProtectedPath. Shared files also carry the other approved gate units' changes; this unit covers freeze scope only.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs '008 E1/E2' ok list: absolute outside paths, cd/Set-Location/pushd prefixes incl. quoted dirs with spaces, git -C <outside> checkout/restore, subshells, cp --target-directory=<outside>, sed -i / perl -pi on outside files, 'cd <outside> || exit 1; ...', other checkout's .iced/active; allowed for draft, done and blocked; inside equivalents blocked"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs '008 E1/E2' bad list: rm outside + local.txt, $TARGET, cd back into root (quoted), bare 'cd && rm x', subshell cd then inside rm, cp --target-directory=. / -t ., 'cd <outside> || rm src/a.ts', 'cd ../missing || rm .iced/active', 'cd <outside> | rm src/a.ts', mixed sed -i operands; all blocked"
+    },
+    {
+      "expectation": "E3",
+      "kind": "check",
+      "ref": "packages/pi-intent/test/gate.test.mjs '008 E3' (always mode without active unit: outside-only allowed, inside blocked); npm test 130 tests (80 iced-core, 50 pi-intent), 0 fail; git diff --check clean"
+    }
+  ],
+  "files": [
+    "packages/iced-core/README.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/pi-intent/README.md",
+    "packages/pi-intent/docs/design.md",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 20223,
+      "timedOut": false,
+      "tail": "....1695ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (10.9193ms)\n✔ gate: original-file multi-edits cannot bypass protected status (9.6288ms)\n✔ gate: unpredictable draft edits fail closed (10.6721ms)\n✔ gate: building allows code, freezes the contract (11.7645ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (41.2313ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (18.4305ms)\n✔ 007 E1: stderr-only, discard and temp-dir redirects are not mutating; repo redirects are (0.2233ms)\n✔ 007 E2: reading an ICED-owned file is allowed; writing to it is blocked (24.5043ms)\n✔ 008 E1/E2: not building, mutations outside the root are allowed; inside, relative, mixed or unresolvable stay blocked (106.545ms)\n✔ 008 E3: gate always without an active unit allows outside-only mutations and blocks inside ones (1.6778ms)\n✔ 009 E1: at autonomy 2 or 3 the not-building freeze notifies instead of blocking; 0 and 1 block (66.5577ms)\n✔ 009 E2: owned files, protected keys, the frozen contract and review units still block at autonomy 2 and 3 (48.6329ms)\n✔ 009 C2/C3: protection blocks are hard (kept in gate mode warn); the not-building freeze is not (46.8146ms)\n✔ 009 E3: the extension allows notify decisions and shows a notice when a UI exists (0.4056ms)\n✔ 010 E1: after sign-off, Context, Open questions and unprotected frontmatter may change; closed units are frozen (379.7508ms)\n✔ 010 E2: contract text, protected keys and invalid results are blocked with the changed section named (15.7263ms)\n✔ 011 E1: operational config keys may change; integrity keys, their removal or invalid JSON are blocked (13.9532ms)\n✔ 011 E2/E3: other ICED-owned files and shell writes to the config stay blocked; the key list is exported once (17.1763ms)\n✔ 012 E1: every block reason names a concrete next step, stays short and has no absolute local path (87.1198ms)\n✔ 012 E2: blocked, verifying, done and shell not-building reasons name the human command or tool (151.5592ms)\n✔ no file targets another harness or the removed CLI (142.4617ms)\n✔ removed paths stay removed (137.8384ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.3432ms)\n✔ no package exposes a CLI (0.4268ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (2447.7103ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (1213.5881ms)\n✔ every module the extension imports is in the tarball or a declared dependency (1155.9347ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.5377ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.7161ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.7244ms)\n✔ models without thinking only toggle off and say so (0.6561ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1544ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.1782ms)\n✔ typing filters models but keeps actions and rotations (0.1658ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2182ms)\n✔ createPicker marks already-picked refs and ignores extras (0.1169ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.7589ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.1027ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (1756.4577ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1531.2053ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (516.2094ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (730.1322ms)\nℹ tests 50\nℹ suites 0\nℹ pass 50\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 5074.7039\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": false,
+      "error": "verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached",
+      "durationMs": 17728
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": false,
+    "needsHuman": true,
+    "commandsOk": true,
+    "problems": [
+      "Independent verifier unavailable: full: verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached. Result needs human review."
+    ],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "While the active unit is draft, done or blocked, mutating commands operating only outside the root (absolute paths, `cd`/`Set-Location`/`pushd` prefixes, `git -C`) are allowed; the same commands inside the root or with relative targets are blocked as today.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs '008 E1/E2' ok list: absolute outside paths, cd/Set-Location/pushd prefixes incl. quoted dirs with spaces, git -C <outside> checkout/restore, subshells, cp --target-directory=<outside>, sed -i / perl -pi on outside files, 'cd <outside> || exit 1; ...', other checkout's .iced/active; allowed for draft, done and blocked; inside equivalents blocked"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E2",
+        "text": "Mixed commands (outside then inside, or `cd` back into the root) and unresolvable targets stay blocked.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs '008 E1/E2' bad list: rm outside + local.txt, $TARGET, cd back into root (quoted), bare 'cd && rm x', subshell cd then inside rm, cp --target-directory=. / -t ., 'cd <outside> || rm src/a.ts', 'cd ../missing || rm .iced/active', 'cd <outside> | rm src/a.ts', mixed sed -i operands; all blocked"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E3",
+        "text": "`always` mode without an active unit allows outside-only mutations and blocks inside ones; full suite passes.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "check",
+            "ref": "packages/pi-intent/test/gate.test.mjs '008 E3' (always mode without active unit: outside-only allowed, inside blocked); npm test 130 tests (80 iced-core, 50 pi-intent), 0 fail; git diff --check clean"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "A mutating command that works only in a sibling directory, a temp directory or another repository (via absolute path, `cd <outside>` prefix, or `-C <outside>` for git) is blocked because the active unit is not building.",
+        "from": "008-gate-freeze-scope-while-the-active-unit",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F2",
+        "text": "A mutating command with a relative target, no target, or a target inside the root is allowed while the active unit is not building (regression).",
+        "from": "008-gate-freeze-scope-while-the-active-unit",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F3",
+        "text": "A command that `cd`s outside and then back inside the root, or chains an inside target after an outside one, is treated as outside.",
+        "from": "008-gate-freeze-scope-while-the-active-unit",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Mutating commands whose targets are inside the ICED root, or whose targets cannot be determined, stay frozen exactly as today.",
+        "from": "008-gate-freeze-scope-while-the-active-unit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C2",
+        "text": "Protection of ICED-owned files and the `always` mode behave as today for paths inside the root.",
+        "from": "008-gate-freeze-scope-while-the-active-unit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C3",
+        "text": "Classification stays a host-neutral heuristic in iced-core guard: no command execution, no sandbox.",
+        "from": "008-gate-freeze-scope-while-the-active-unit",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": ""
+  },
+  "verdict": "pass"
+}

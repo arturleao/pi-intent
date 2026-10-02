@@ -1,0 +1,181 @@
+{
+  "id": "011-gate-config-allow-agents-to-edit-iced-co",
+  "title": "Agents can tune the ICED config except its integrity keys",
+  "attempt": 2,
+  "ts": "2026-10-02T12:31:15Z",
+  "summary": "classifyPath returns kind 'config' for .iced/config.json. gateDecision allows a write/edit when the predicted file parses as JSON and every integrity key is deep-equal to before; it hard-blocks (reason naming the keys) when an integrity key is changed, added or removed, when the result is invalid JSON, or when the edit cannot be predicted. CONFIG_INTEGRITY_KEYS (gate, autonomy, maxAutonomy, autonomyByRisk, verify.model, verify.independent, verify.lenses, verify.maxAttempts, build.testWriterModel) is exported once from iced-core guard.mjs with changedConfigIntegrityKeys(before, after) (null for invalid JSON) and re-exported by gate.mjs. .iced/active, .iced/metrics.jsonl, evidence.md and verify.json stay owned. Shell writes to the config stay blocked two ways: writesProtectedShellTarget on the literal text, and the new shellWritesProtectedPath(root, cwd, command) which resolves operands and redirect targets through cd/pushd/git -C so `cd .iced && echo '{}' > config.json`, `cd .iced; echo x > active`, `cd intent/<id> && rm iced.md` are hard blocks (attempt-1 finding). Both READMEs list the integrity keys and the operational keys. Units 007-010 and 012 are implemented in the same working tree.",
+  "evidence": [
+    {
+      "expectation": "E1",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs",
+      "note": "test '011 E1': operational key changes (verify.commands, timeoutSec, parallel, build.testWriter, memory, new key, reordered) allow for write and edit; changing, removing or adding each of the nine integrity keys blocks (hard) with the key named and a /iced command; invalid JSON and [] block"
+    },
+    {
+      "expectation": "E2",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs",
+      "note": "test '011 E2/E3': .iced/active, .iced/metrics.jsonl, evidence.md, verify.json writes block at autonomy 3; literal and directory-relative shell writes (Set-Content, redirect, node/.NET writers, cd .iced && echo > config.json / active / metrics.jsonl, cd intent/<id> && rm iced.md, cd intent && rm -rf <id>, pushd .iced; Set-Content, cd .iced && sed -i) block hard; cd .iced && cat config.json and redirects to /dev/null allow"
+    },
+    {
+      "expectation": "E3",
+      "kind": "test",
+      "ref": "packages/pi-intent/test/gate.test.mjs",
+      "note": "same test asserts the exact CONFIG_INTEGRITY_KEYS list from gate.mjs (re-export of @arturleao/iced-core/guard) and that packages/pi-intent/README.md names each key in backticks; packages/iced-core/README.md 'Guarding changes' documents the list too; npm test: 130 pass, 0 fail"
+    }
+  ],
+  "files": [
+    "packages/iced-core/README.md",
+    "packages/iced-core/spec/SPEC.md",
+    "packages/iced-core/src/core.mjs",
+    "packages/iced-core/src/guard.mjs",
+    "packages/pi-intent/README.md",
+    "packages/pi-intent/docs/design.md",
+    "packages/pi-intent/extensions/iced/index.ts",
+    "packages/pi-intent/src/gate.mjs",
+    "packages/pi-intent/test/gate.test.mjs"
+  ],
+  "commandResults": [
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 16909,
+      "timedOut": false,
+      "tail": "...nd commits (1.6601ms)\n✔ gate: draft allows drafting the unit but not protected keys or code (8.7409ms)\n✔ gate: original-file multi-edits cannot bypass protected status (6.3411ms)\n✔ gate: unpredictable draft edits fail closed (9.4154ms)\n✔ gate: building allows code, freezes the contract (11.302ms)\n✔ gate: other statuses freeze code; review units are read-only; closed units count as none (26.1569ms)\n✔ gate: committing the work is allowed once the unit is done or accepted (10.6265ms)\n✔ 007 E1: stderr-only, discard and temp-dir redirects are not mutating; repo redirects are (0.1992ms)\n✔ 007 E2: reading an ICED-owned file is allowed; writing to it is blocked (20.4452ms)\n✔ 008 E1/E2: not building, mutations outside the root are allowed; inside, relative, mixed or unresolvable stay blocked (93.134ms)\n✔ 008 E3: gate always without an active unit allows outside-only mutations and blocks inside ones (1.366ms)\n✔ 009 E1: at autonomy 2 or 3 the not-building freeze notifies instead of blocking; 0 and 1 block (45.3156ms)\n✔ 009 E2: owned files, protected keys, the frozen contract and review units still block at autonomy 2 and 3 (35.3359ms)\n✔ 009 C2/C3: protection blocks are hard (kept in gate mode warn); the not-building freeze is not (19.1788ms)\n✔ 009 E3: the extension allows notify decisions and shows a notice when a UI exists (0.3872ms)\n✔ 010 E1: after sign-off, Context, Open questions and unprotected frontmatter may change; closed units are frozen (57.1378ms)\n✔ 010 E2: contract text, protected keys and invalid results are blocked with the changed section named (10.8553ms)\n✔ 011 E1: operational config keys may change; integrity keys, their removal or invalid JSON are blocked (5.7468ms)\n✔ 011 E2/E3: other ICED-owned files and shell writes to the config stay blocked; the key list is exported once (10.8743ms)\n✔ 012 E1: every block reason names a concrete next step, stays short and has no absolute local path (78.4941ms)\n✔ 012 E2: blocked, verifying, done and shell not-building reasons name the human command or tool (63.0315ms)\n✔ no file targets another harness or the removed CLI (118.7134ms)\n✔ removed paths stay removed (103.7284ms)\n✔ this repo's ICED config has no harness targets or agent runner (0.3312ms)\n✔ no package exposes a CLI (0.38ms)\n✔ iced-core tarball: sources, spec, templates and rubric; no tests or repo data (917.7722ms)\n✔ pi-intent tarball: extension and its modules; pi manifest; depends on iced-core; pi packages are peers (1009.1515ms)\n✔ every module the extension imports is in the tarball or a declared dependency (990.9432ms)\n✔ workspace root is private, not publishable, and points pi at the extension (0.3191ms)\n✔ cycleEffort walks default -> off ... max -> default, both ways (0.5118ms)\n✔ effort cycles on the highlighted model and is kept in the chosen ref (0.7025ms)\n✔ models without thinking only toggle off and say so (0.6713ms)\n✔ rotation row sets one effort for all members; action rows only when effortable (0.1681ms)\n✔ space picks up to multi models in order; enter returns them with their efforts (0.1774ms)\n✔ typing filters models but keeps actions and rotations (0.1618ms)\n✔ typed models are added at the top of the models, picked, and keep their effort (0.2117ms)\n✔ createPicker marks already-picked refs and ignores extras (0.0993ms)\n✔ piArgs: print mode, no session, tools for the access level, model and thinking, the prompt attached (0.7547ms)\n✔ verifier tools never include write, edit or a shell; the test writer may write (0.1047ms)\n✔ piAgent spawns pi with ICED_ROLE and cleans its temp prompt (423.4308ms)\n✔ iced-core submitUnit through piAgent: parallel pi verifiers with the session model and pinned effort (1233.6613ms)\n✔ runTestWriter through piAgent gets write tools and the test writer model (439.0063ms)\n✔ [E5] configs written by older versions (per-host maps, runner, targets) load with the pi entries applied (591.1148ms)\nℹ tests 50\nℹ suites 0\nℹ pass 50\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 3115.1019\n"
+    }
+  ],
+  "host": "pi",
+  "lenses": [
+    {
+      "name": "full",
+      "model": "openai-codex/gpt-6-astra",
+      "effort": "medium",
+      "ok": false,
+      "error": "verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached",
+      "durationMs": 12936
+    }
+  ],
+  "result": {
+    "verdict": "pass",
+    "independent": false,
+    "needsHuman": true,
+    "commandsOk": true,
+    "problems": [
+      "Independent verifier unavailable: full: verifier exited 1: MCP: Project servers blocked: github (blocked: project server approval required — approve it in a trusted interactive session or set user-global settings.projectServers to \"allow\") Codex error: The usage limit has been reached. Result needs human review."
+    ],
+    "expectations": [
+      {
+        "id": "E1",
+        "text": "Write/edit of `.iced/config.json` that changes only operational keys is allowed; changing, removing or adding any integrity key, or producing invalid JSON, is blocked with a reason naming the key.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E1",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs",
+            "note": "test '011 E1': operational key changes (verify.commands, timeoutSec, parallel, build.testWriter, memory, new key, reordered) allow for write and edit; changing, removing or adding each of the nine integrity keys blocks (hard) with the key named and a /iced command; invalid JSON and [] block"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E2",
+        "text": "`.iced/active`, `.iced/metrics.jsonl`, `evidence.md` and `verify.json` stay blocked; shell writes to the config stay blocked.",
+        "kind": "test",
+        "ref": "packages/pi-intent/test/gate.test.mjs",
+        "claims": [
+          {
+            "expectation": "E2",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs",
+            "note": "test '011 E2/E3': .iced/active, .iced/metrics.jsonl, evidence.md, verify.json writes block at autonomy 3; literal and directory-relative shell writes (Set-Content, redirect, node/.NET writers, cd .iced && echo > config.json / active / metrics.jsonl, cd intent/<id> && rm iced.md, cd intent && rm -rf <id>, pushd .iced; Set-Content, cd .iced && sed -i) block hard; cd .iced && cat config.json and redirects to /dev/null allow"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      },
+      {
+        "id": "E3",
+        "text": "The integrity-key list is exported from one place and documented in README; full suite passes.",
+        "kind": "check",
+        "ref": "npm test",
+        "claims": [
+          {
+            "expectation": "E3",
+            "kind": "test",
+            "ref": "packages/pi-intent/test/gate.test.mjs",
+            "note": "same test asserts the exact CONFIG_INTEGRITY_KEYS list from gate.mjs (re-export of @arturleao/iced-core/guard) and that packages/pi-intent/README.md names each key in backticks; packages/iced-core/README.md 'Guarding changes' documents the list too; npm test: 130 pass, 0 fail"
+          }
+        ],
+        "result": "claimed",
+        "evidence": "Not independently verified."
+      }
+    ],
+    "failures": [
+      {
+        "id": "F1",
+        "text": "An agent write/edit that changes only non-integrity keys of `.iced/config.json` is blocked.",
+        "from": "011-gate-config-allow-agents-to-edit-iced-co",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F2",
+        "text": "An agent write/edit that changes an integrity key, removes it, or makes the file invalid JSON is allowed.",
+        "from": "011-gate-config-allow-agents-to-edit-iced-co",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "F3",
+        "text": "`.iced/active` or `.iced/metrics.jsonl` become editable by agents.",
+        "from": "011-gate-config-allow-agents-to-edit-iced-co",
+        "triggered": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "constraints": [
+      {
+        "id": "C1",
+        "text": "Integrity keys stay blocked for agents at every autonomy and gate mode except `off`: `gate`, `autonomy`, `maxAutonomy`, `autonomyByRisk`, `verify.model`, `verify.independent`, `verify.lenses`, `verify.maxAttempts`, `build.testWriterModel`.",
+        "from": "011-gate-config-allow-agents-to-edit-iced-co",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C2",
+        "text": "A config edit is allowed only when the predicted file parses as JSON and every integrity key has the same value as before (deep equality); unpredictable edits or invalid JSON are blocked.",
+        "from": "011-gate-config-allow-agents-to-edit-iced-co",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C3",
+        "text": "`.iced/active` and `.iced/metrics.jsonl` stay ICED-owned and blocked.",
+        "from": "011-gate-config-allow-agents-to-edit-iced-co",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      },
+      {
+        "id": "C4",
+        "text": "Shell commands that write to `.iced/config.json` stay blocked (shell content cannot be predicted); the write/edit tools are the only agent path.",
+        "from": "011-gate-config-allow-agents-to-edit-iced-co",
+        "violated": false,
+        "checked": false,
+        "evidence": ""
+      }
+    ],
+    "outOfScope": [],
+    "ignoredOutOfScope": [],
+    "notes": ""
+  },
+  "verdict": "pass"
+}
